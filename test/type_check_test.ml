@@ -74,6 +74,12 @@ let test_fixture = "type_check" >:::
   "let" >:: ( fun () ->
     assert_equal TInt (type_of [("y", TInt)] (Let ("x", Var "y", Var "x")));
   );
+
+  "app" >:: ( fun () ->
+    assert_equal TInt (type_of [] (App (Fun ("f", "x", TInt, TInt, Var "x"), Int 8)));
+    assert_type_error (fun _ -> type_of [] (App (Fun ("f", "x", TInt, TInt, Var "x"), Bool true))) "incompatible types";
+    assert_type_error (fun _ -> type_of [] (App (Int 7, Bool true))) "function expected";
+  );
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)
