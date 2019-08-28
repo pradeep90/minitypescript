@@ -38,6 +38,25 @@ let test_fixture = "type_check" >:::
     assert_equal (TInt) (type_of [("x", TInt); ("y", TBool)] (Plus (Var "x", Int 7)));
     assert_type_error (fun _ -> type_of [("x", TInt); ("y", TBool)] (Minus (Var "x", Var "y"))) "incompatible types";
   );
+
+  "subtype_equals" >:: ( fun () ->
+    assert_equal true (subtype TBool TBool);
+    assert_equal false (subtype TBool TInt);
+  );
+
+  "subtype_records" >:: ( fun () ->
+    assert_equal true (subtype (TRecord [("a", TInt)]) (TRecord []));
+    assert_equal false (subtype (TRecord []) (TRecord [("a", TInt)]));
+    assert_equal false (subtype (TRecord [("b", TInt)]) (TRecord [("a", TInt)]));
+    assert_equal true (subtype (TRecord [("a", TRecord [("a", TInt)])]) (TRecord [("a", TRecord [])]));
+    assert_equal false (subtype (TRecord [("a", TRecord [])]) (TRecord [("a", TRecord [("a", TInt)])]));
+  );
+
+  "subtype_arrows" >:: ( fun () ->
+    assert_equal true (subtype (TArrow (TBool, TInt)) (TArrow (TBool, TInt)));
+    assert_equal true (subtype (TArrow (TRecord [], TRecord [("a", TInt)])) (TArrow (TRecord [("a", TInt)], TRecord [])));
+    assert_equal false (subtype (TArrow (TRecord [("a", TInt)], TRecord [("a", TInt)])) (TArrow (TRecord [], TRecord [])));
+  );
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)
