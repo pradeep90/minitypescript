@@ -29,6 +29,15 @@ let test_fixture = "type_check" >:::
     assert_equal (TBool) (type_of [("x", TInt); ("y", TBool)] (Var "y"));
     assert_type_error (fun _ -> type_of [] (Var "x")) "unknown variable x";
   );
+
+  "int" >:: ( fun () ->
+    assert_equal (TInt) (type_of [] (Int 7));
+  );
+
+  "arithmetic" >:: ( fun () ->
+    assert_equal (TInt) (type_of [("x", TInt); ("y", TBool)] (Plus (Var "x", Int 7)));
+    assert_type_error (fun _ -> type_of [("x", TInt); ("y", TBool)] (Minus (Var "x", Var "y"))) "incompatible types";
+  );
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)
