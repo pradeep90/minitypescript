@@ -63,6 +63,17 @@ let test_fixture = "type_check" >:::
     assert_equal (TRecord [("a", TInt)]) (type_of [] (If (Bool true, Record [("a", Int 7); ("b", Bool false)], Record [("a", Int 8)])));
     assert_type_error (fun _ -> type_of [] (If (Bool true, Record [("a", Int 7)], Record [("b", Bool false)]))) "incompatible types in conditional"
   );
+
+  "fun" >:: ( fun () ->
+    assert_equal (TArrow (TInt, TInt)) (type_of [] (Fun ("f", "x", TInt, TInt, Var "x")));
+    assert_type_error (fun _ -> type_of [] (Fun ("f", "x", TInt, TBool, Var "x"))) "incompatible types";
+    assert_equal (TArrow (TInt, TInt)) (type_of [] (Fun ("f", "x", TInt, TInt, App (Var "f", Var "x"))));
+    assert_type_error (fun _ -> type_of [] (Fun ("f", "x", TInt, TInt, App (Var "f", Bool true)))) "incompatible types";
+  );
+
+  "let" >:: ( fun () ->
+    assert_equal TInt (type_of [("y", TInt)] (Let ("x", Var "y", Var "x")));
+  );
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)
