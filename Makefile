@@ -10,16 +10,12 @@ SRCDIR = src
 .PHONY: $(LANGS)
 
 default:
-	@echo "To compile all languages run:                 make all"
-	@echo "To compile a single language <lang> run:      make <lang>"
-	@echo "To compile bytecode add BUILD=byte:           make BUILD=byte ..."
-	@echo "Available languages:"
-	@echo "$(sort $(LANGS))"
+	@echo "To compile MiniTypeScript, run:                 make all"
 
 all: $(LANGS)
 
-$(LANGS): % :
-	$(OCAMLBUILD) -use-menhir -menhir "menhir --explain" -libs unix -I $(SRCDIR) src/$@/$@.$(BUILD)
+minitypescript:
+	$(OCAMLBUILD) -use-menhir -menhir "menhir --explain" -libs unix -I $(SRCDIR) src/$@.$(BUILD)
 
 clean:
 	$(OCAMLBUILD) -clean
