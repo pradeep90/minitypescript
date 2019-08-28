@@ -91,6 +91,15 @@ let test_fixture = "eval" >:::
     assert_equal (Int 7) (eval [] (Let ("x", Int 7, Var "x")));
     assert_equal (Int 15) (eval [] (Let ("x", Int 7, (Let ("y", Int 8, Plus (Var "x", Var "y"))))));
   );
+
+  "app" >:: (fun () ->
+    assert_equal (Int 8) (eval [("yo", Int 7)] (App (Fun ("f", "x", TInt, TInt, Var "x"), Int 8)));
+    assert_equal (Int 15) (eval [("yo", Int 7)] (App (Fun ("f", "x", TInt, TInt, Plus (Var "x", Var "yo")), Int 8)));
+  );
+
+  "app_recursive" >:: (fun () ->
+    assert_equal (Int 120) (eval [] (App (Fun ("fact", "x", TInt, TInt, If (Equal (Var "x", Int 1), Int 1, Times (Var "x", App (Var "fact", Minus (Var "x", Int 1))))), Int 5)));
+  );
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)
