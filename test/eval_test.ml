@@ -11,7 +11,8 @@ let test_fixture = "eval" >:::
   );
 
   "var" >:: (fun () ->
-    assert_equal (Var "boyz") (eval [("yo", Var "boyz")] (Var "yo"))
+    assert_equal (Var "boyz") (eval [("yo", Var "boyz")] (Var "yo"));
+    assert_equal (Bool true) (eval [("yo", Bool true)] (Var "yo"))
   );
 
   "int" >:: (fun () ->
@@ -36,6 +37,31 @@ let test_fixture = "eval" >:::
 
   "bool" >:: (fun () ->
     assert_equal (Bool true) (eval [] (Bool true))
+  );
+
+  "equal" >:: (fun () ->
+    assert_equal (Bool true) (eval [] (Equal (Int 7, Int 7)));
+    assert_equal (Bool false) (eval [] (Equal (Int 7, Int 8)))
+  );
+
+  "less" >:: (fun () ->
+    assert_equal (Bool true) (eval [] (Less (Int 7, Int 8)));
+    assert_equal (Bool false) (eval [] (Less (Int 9, Int 8)))
+  );
+
+  "and" >:: (fun () ->
+    assert_equal (Bool true) (eval [] (And (Bool true, Bool true)));
+    assert_equal (Bool false) (eval [] (And (Bool true, Bool false)))
+  );
+
+  "or" >:: (fun () ->
+    assert_equal (Bool true) (eval [] (Or (Bool true, Bool false)));
+    assert_equal (Bool false) (eval [] (Or (Bool false, Bool false)))
+  );
+
+  "not" >:: (fun () ->
+    assert_equal (Bool true) (eval [] (Not (Bool false)));
+    assert_equal (Bool false) (eval [] (Not (Bool true)))
   );
 ]
 
