@@ -1,0 +1,5 @@
+S src
+S src/minitypescript
+B _build/src
+B _build/src/minitypescript
+PKG menhirLib
