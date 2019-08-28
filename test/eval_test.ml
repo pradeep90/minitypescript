@@ -80,6 +80,12 @@ let test_fixture = "eval" >:::
        assert_equal true (closure == (List.assoc "f" env)) ~msg:"function name should point to the closure";
     | _ -> runtime_error "wrong output"
   );
+
+  "closure" >:: (fun () ->
+    let rec closure = Closure ([("f", closure)], "x", Var "x")
+    in
+    assert_equal true (closure == eval [] closure);
+  );
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)
