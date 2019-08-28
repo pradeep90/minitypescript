@@ -17,6 +17,26 @@ let test_fixture = "eval" >:::
   "int" >:: (fun () ->
     assert_equal (Int 7) (eval [] (Int 7))
   );
+
+  "plus" >:: (fun () ->
+    assert_equal (Int 15) (eval [("yo", Int 8)] (Plus (Var "yo", Int 7)))
+  );
+
+  "minus" >:: (fun () ->
+    assert_equal (Int (-1)) (eval [("yo", Int 8)] (Minus (Int 7, Var "yo")))
+  );
+
+  "times" >:: (fun () ->
+    assert_equal (Int 56) (eval [("yo", Int 8)] (Times (Int 7, Var "yo")))
+  );
+
+  "divide" >:: (fun () ->
+    assert_equal (Int 1) (eval [("yo", Int 8)] (Divide (Int 9, Var "yo")))
+  );
+
+  "bool" >:: (fun () ->
+    assert_equal (Bool true) (eval [] (Bool true))
+  );
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)
