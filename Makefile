@@ -22,8 +22,9 @@ repl:
 
 .PHONY: test
 test:
-	ocamlbuild -pkgs oUnit -I $(SRCDIR) $(TESTDIR)/eval_test.$(BUILD)
+	ocamlbuild -pkgs oUnit -I $(SRCDIR) $(TESTDIR)/eval_test.$(BUILD) $(TESTDIR)/type_check_test.$(BUILD)
 	./eval_test.native
+	./type_check_test.native
 
 clean:
 	$(OCAMLBUILD) -clean
