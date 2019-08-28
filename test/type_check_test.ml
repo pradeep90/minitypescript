@@ -22,10 +22,12 @@ let test_fixture = "type_check" >:::
 
   "check_labels" >:: ( fun () ->
     assert_equal () (check_labels ["yo"; "boyz"]);
+    assert_type_error (fun _ -> check_labels ["yo"; "yo"]) "label yo occurs more than once"
   );
 
   "var" >:: ( fun () ->
     assert_equal (TBool) (type_of [("x", TInt); ("y", TBool)] (Var "y"));
+    assert_type_error (fun _ -> type_of [] (Var "x")) "unknown variable x";
   );
 ]
 
