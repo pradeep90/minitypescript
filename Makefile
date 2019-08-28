@@ -16,6 +16,10 @@ all: minitypescript
 minitypescript:
 	$(OCAMLBUILD) -use-menhir -menhir "menhir --explain" -libs unix -I $(SRCDIR) $(SRCDIR)/minitypescript.$(BUILD)
 
+.PHONY: repl
+repl:
+	ocaml -I _build/src
+
 .PHONY: test
 test:
 	ocamlbuild -pkgs oUnit -I $(SRCDIR) $(TESTDIR)/eval_test.$(BUILD)
