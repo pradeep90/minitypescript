@@ -11,7 +11,6 @@ let test_fixture = "eval" >:::
   );
 
   "var" >:: (fun () ->
-    assert_equal (Var "boyz") (eval [("yo", Var "boyz")] (Var "yo"));
     assert_equal (Bool true) (eval [("yo", Bool true)] (Var "yo"))
   );
 
@@ -99,6 +98,15 @@ let test_fixture = "eval" >:::
 
   "app_recursive" >:: (fun () ->
     assert_equal (Int 120) (eval [] (App (Fun ("fact", "x", TInt, TInt, If (Equal (Var "x", Int 1), Int 1, Times (Var "x", App (Var "fact", Minus (Var "x", Int 1))))), Int 5)));
+  );
+
+  "record" >:: (fun () ->
+    assert_equal (Record [("a", Int 7); ("b", Record [("nested", Bool true)])]) (eval [("yo", Int 7)] (Record [("a", Var "yo"); ("b", Record [("nested", Bool true)])]));
+  );
+
+  "project" >:: (fun () ->
+    assert_equal (Int 7) (eval [("yo", Int 7)] (Project (Record [("a", Var "yo"); ("b", Record [("a", Bool true)])], "a")));
+    assert_equal (Bool true) (eval [("yo", Int 7)] (Project (Project (Record [("a", Var "yo"); ("b", Record [("a", Bool true)])], "b"), "a")));
   );
 ]
 
