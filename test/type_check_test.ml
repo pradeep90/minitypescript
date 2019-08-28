@@ -14,6 +14,10 @@ let test_fixture = "type_check" >:::
   "check_labels" >:: ( fun () ->
     assert_equal () (check_labels ["yo"; "boyz"]);
   );
+
+  "var" >:: ( fun () ->
+    assert_equal (TBool) (type_of [("x", TInt); ("y", TBool)] (Var "y"));
+  );
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)
