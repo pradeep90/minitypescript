@@ -10,8 +10,12 @@ let test_fixture = "eval" >:::
     assert_equal 3 (lookup_value "boyz" [("yo",4); ("boyz",3)]) ~printer:string_of_int;
   );
 
-  "Var" >:: (fun () ->
+  "var" >:: (fun () ->
     assert_equal (Var "boyz") (eval [("yo", Var "boyz")] (Var "yo"))
+  );
+
+  "int" >:: (fun () ->
+    assert_equal (Int 7) (eval [] (Int 7))
   );
 ]
 
