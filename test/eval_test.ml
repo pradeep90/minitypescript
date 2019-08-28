@@ -68,6 +68,18 @@ let test_fixture = "eval" >:::
     assert_equal (Int 3) (eval [] (If (Bool true, Int 3, Divide (Int 7, Int 0))));
     assert_equal (Int 4) (eval [] (If (Bool false, Divide (Int 7, Int 0), Int 4)))
   );
+
+  "fun" >:: (fun () ->
+    let closure = (eval [("yo", Int 7)] (Fun ("f", "x", TInt, TInt, Var "x")))
+    in
+    match closure with
+    | Closure (env, param, body) ->
+       assert_equal "x" param;
+       assert_equal (Var "x") body;
+       assert_equal (Int 7) (List.assoc "yo" env);
+       assert_equal true (closure == (List.assoc "f" env)) ~msg:"function name should point to the closure";
+    | _ -> runtime_error "wrong output"
+  );
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)
