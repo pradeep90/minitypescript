@@ -86,6 +86,11 @@ let test_fixture = "eval" >:::
     in
     assert_equal true (closure == eval [] closure);
   );
+
+  "let" >:: (fun () ->
+    assert_equal (Int 7) (eval [] (Let ("x", Int 7, Var "x")));
+    assert_equal (Int 15) (eval [] (Let ("x", Int 7, (Let ("y", Int 8, Plus (Var "x", Var "y"))))));
+  );
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)
