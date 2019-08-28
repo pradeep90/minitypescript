@@ -63,6 +63,11 @@ let test_fixture = "eval" >:::
     assert_equal (Bool true) (eval [] (Not (Bool false)));
     assert_equal (Bool false) (eval [] (Not (Bool true)))
   );
+
+  "if" >:: (fun () ->
+    assert_equal (Int 3) (eval [] (If (Bool true, Int 3, Divide (Int 7, Int 0))));
+    assert_equal (Int 4) (eval [] (If (Bool false, Divide (Int 7, Int 0), Int 4)))
+  );
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)
