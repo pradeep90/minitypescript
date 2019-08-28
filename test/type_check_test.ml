@@ -80,6 +80,17 @@ let test_fixture = "type_check" >:::
     assert_type_error (fun _ -> type_of [] (App (Fun ("f", "x", TInt, TInt, Var "x"), Bool true))) "incompatible types";
     assert_type_error (fun _ -> type_of [] (App (Int 7, Bool true))) "function expected";
   );
+
+  "record" >:: ( fun () ->
+    assert_type_error (fun _ -> type_of [] (Record [("a", Int 7); ("a", Bool true)])) "label a occurs more than once";
+    assert_equal (TRecord [("a", TInt); ("b", TRecord [("a", TBool)])]) (type_of [] (Record [("a", Int 7); ("b", Record [("a", Bool true)])]));
+  );
+
+  "project" >:: ( fun () ->
+    assert_equal TInt (type_of [] (Project (Record [("a", Int 7); ("b", Record [("c", Bool true)])], "a")));
+    assert_type_error (fun _ -> type_of [] (Project (Record [("a", Int 7); ("b", Record [("c", Bool true)])], "c"))) "no such field c";
+    assert_type_error (fun _ -> type_of [] (Project (Int 7, "c"))) "record expected";
+  );
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)
