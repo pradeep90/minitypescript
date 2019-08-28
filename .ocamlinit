@@ -1,1 +1,2 @@
 #use "eval.ml";;
+#use "type_check.ml";;
