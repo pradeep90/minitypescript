@@ -69,6 +69,8 @@ let test_fixture = "type_check" >:::
     assert_type_error (fun _ -> type_of [] (Fun ("f", "x", TInt, TBool, Var "x"))) "incompatible types";
     assert_equal (TArrow (TInt, TInt)) (type_of [] (Fun ("f", "x", TInt, TInt, App (Var "f", Var "x"))));
     assert_type_error (fun _ -> type_of [] (Fun ("f", "x", TInt, TInt, App (Var "f", Bool true)))) "incompatible types";
+
+    assert_equal (TArrow (TInt, TInt)) (type_of [("Foo", TInt)] (Fun ("f", "x", TAlias "Foo", TAlias "Foo", App (Var "f", Var "x"))));
   );
 
   "let" >:: ( fun () ->

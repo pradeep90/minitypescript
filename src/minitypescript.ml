@@ -23,6 +23,7 @@ module MiniTypeScript = Zoo.Main(struct
         ((x,ty) :: ctx, (x,v) :: env)
     | Syntax.TypeDecl (x, ty_expr) ->
         Zoo.print_info "typedecl %s : %s@." x (Syntax.string_of_type ty_expr) ;
+        assert (Type_check.is_concrete ty_expr);
         ((x,ty_expr) :: ctx, env)
 
 end) ;;
