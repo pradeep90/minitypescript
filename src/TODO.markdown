@@ -1,7 +1,5 @@
 # Functional Programming Feature Wish List
 
-+ Add a type declaration statement. Allow the name to be referenced.
-
 + Generic type with syntax. What would its subtyping relation look like? Foo a === record with a in the right places.
 
 + Nested generic types. Tuples - basically Pair<a,b>.

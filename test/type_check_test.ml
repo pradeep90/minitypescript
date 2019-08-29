@@ -100,6 +100,8 @@ let test_fixture = "type_check" >:::
     assert_equal TInt (substitute_aliases [("bar", TBool); ("foo", TInt)] (TAlias "foo"));
     assert_equal (TArrow (TInt, TBool)) (substitute_aliases [("bar", TBool); ("foo", TInt)] (TArrow (TAlias "foo", TAlias "bar")));
     assert_equal (TRecord [("a", TInt); ("b", TBool)]) (substitute_aliases [("bar", TBool); ("foo", TInt)] (TRecord [("a", TAlias "foo"); ("b", TAlias "bar")]));
+
+    assert_type_error (fun _ -> substitute_aliases [] (TRecord [("a", TAlias "foo")])) "unknown variable foo";
   );
 
   "is_concrete" >:: ( fun () ->
