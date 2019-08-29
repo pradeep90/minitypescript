@@ -149,6 +149,15 @@ let test_fixture = "type_check" >:::
 
     assert_type_error (fun _ -> param_constraints (TRecord [("a", TParam "foo"); ("b", TParam "foo")]) TInt) "cannot unify {a : foo, b : foo} and int";
   );
+
+  "unify_constraints" >:: ( fun () ->
+    assert_equal [] (unify_constraints [] []);
+    assert_equal [("bar", TBool); ("foo", TInt); ("baz", TInt)] (unify_constraints [("baz", TInt)] [("foo", TInt); ("bar", TBool)]);
+    assert_type_error (fun _ -> unify_constraints [] [("foo", TInt); ("foo", TBool)]) "cannot unify the constraints that type parameter foo : bool and foo : int";
+
+    assert_equal [("bar", TBool); ("foo", TRecord [("a", TInt)]); ("foo", TRecord [("a", TInt)])] (unify_constraints [("foo", TRecord [("a", TInt)])] [("foo", TRecord [("a", TInt); ("b", TBool)]); ("bar", TBool)]);
+    assert_equal [("bar", TBool); ("foo", TRecord [("a", TInt)]); ("foo", TRecord [("a", TInt); ("b", TBool)])] (unify_constraints [("foo", TRecord [("a", TInt); ("b", TBool)])] [("foo", TRecord [("a", TInt)]); ("bar", TBool)]);
+  );
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)

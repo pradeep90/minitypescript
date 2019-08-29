@@ -138,6 +138,19 @@ and param_constraints ty ty_sub =
     | TArrow (ty_in1, ty_out1), TArrow (ty_in2, ty_out2) -> (param_constraints ty_in2 ty_in1) @ (param_constraints ty_out1 ty_out2)
     | _, _ -> type_error ("cannot unify " ^ string_of_type ty ^ " and " ^ string_of_type ty_sub)
 
+(** [unify_constraints xs] returns the substitutions necessary (including those in [acc]) to unify the constraints (p, ty); ... in [xs]. *)
+and unify_constraints acc xs = match xs with
+  | [] -> acc
+  | (p, ty)::xs' ->
+     let ty_final =
+       (try let ty_prev = List.assoc p acc in
+         if subtype ty_prev ty
+         then ty
+         else if subtype ty ty_prev then
+           ty_prev
+         else type_error ("cannot unify the constraints that type parameter " ^ p ^ " : " ^ string_of_type ty ^ " and " ^ p ^ " : " ^ string_of_type ty_prev)
+       with Not_found -> ty) in
+     unify_constraints ((p, ty_final)::acc) xs'
 
 (** [substitute_params_maybe ctx ty] returns [ty] with type parameters replaced by
    their definitions from [ctx], if available. *)
