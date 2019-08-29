@@ -82,11 +82,12 @@ and subtype ty1 ty2 =
        | _, _ -> false
     )
 
-(** [substitute_aliases ctx ty] returns [ty] with type aliases replaced by their definitions from [ctx]. *)
+(** [substitute_aliases ctx ty] returns [ty] with type aliases replaced by
+   their definitions from [ctx], if available. *)
 and substitute_aliases ctx ty =
   match ty with
   | TInt | TBool | TParam _ -> ty
-  | TAlias name -> lookup_type name ctx
+  | TAlias name -> (try List.assoc name ctx with Not_found -> ty)
   | TArrow (ty_in, ty_out) -> TArrow (substitute_aliases ctx ty_in, substitute_aliases ctx ty_out)
   | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, substitute_aliases ctx ty')) tss)
 

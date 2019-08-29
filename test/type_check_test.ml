@@ -101,6 +101,7 @@ let test_fixture = "type_check" >:::
     assert_equal (TArrow (TInt, TBool)) (substitute_aliases [("bar", TBool); ("foo", TInt)] (TArrow (TAlias "foo", TAlias "bar")));
     assert_equal (TRecord [("a", TInt); ("b", TBool)]) (substitute_aliases [("bar", TBool); ("foo", TInt)] (TRecord [("a", TAlias "foo"); ("b", TAlias "bar")]));
 
+    assert_equal (TRecord [("a", TAlias "foo")]) (substitute_aliases [] (TRecord [("a", TAlias "foo")]));
   );
 
   "has_no_aliases" >:: ( fun () ->
