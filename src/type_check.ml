@@ -44,8 +44,8 @@ let rec type_of ctx = function
 	else if subtype ty3 ty2 then ty2
 	else type_error "incompatible types in conditional"
   | Fun (f, x, ty1, ty2, e) ->
-     let ty1_concrete = substitute_aliases ctx ty1 in
-     let ty2_concrete = substitute_aliases ctx ty2 in
+     let ty1_concrete = make_alias_param (substitute_aliases_maybe ctx ty1) in
+     let ty2_concrete = make_alias_param (substitute_aliases_maybe ctx ty2) in
       check ((f, TArrow(ty1_concrete,ty2_concrete)) :: (x, ty1_concrete) :: ctx) e ty2_concrete ;
       TArrow (ty1_concrete, ty2_concrete)
   | Closure _ -> assert false
@@ -82,14 +82,14 @@ and subtype ty1 ty2 =
        | _, _ -> false
     )
 
-(** [substitute_aliases ctx ty] returns [ty] with type aliases replaced by
+(** [substitute_aliases_maybe ctx ty] returns [ty] with type aliases replaced by
    their definitions from [ctx], if available. *)
-and substitute_aliases ctx ty =
+and substitute_aliases_maybe ctx ty =
   match ty with
   | TInt | TBool | TParam _ -> ty
   | TAlias name -> (try List.assoc name ctx with Not_found -> ty)
-  | TArrow (ty_in, ty_out) -> TArrow (substitute_aliases ctx ty_in, substitute_aliases ctx ty_out)
-  | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, substitute_aliases ctx ty')) tss)
+  | TArrow (ty_in, ty_out) -> TArrow (substitute_aliases_maybe ctx ty_in, substitute_aliases_maybe ctx ty_out)
+  | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, substitute_aliases_maybe ctx ty')) tss)
 
 (** [has_no_aliases ty] returns true iff there are no type aliases within [ty]. *)
 and has_no_aliases ty =
@@ -98,3 +98,12 @@ and has_no_aliases ty =
   | TAlias _ -> false
   | TArrow (ty_in, ty_out) -> has_no_aliases ty_in && has_no_aliases ty_out
   | TRecord tss -> List.for_all (fun (l, ty') -> has_no_aliases ty') tss
+
+(** [make_alias_param ty] returns [ty] with type aliases turned into type
+   parameters. *)
+and make_alias_param ty =
+  match ty with
+  | TInt | TBool | TParam _ -> ty
+  | TAlias name -> TParam name
+  | TArrow (ty_in, ty_out) -> TArrow (make_alias_param ty_in, make_alias_param ty_out)
+  | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, make_alias_param ty')) tss)

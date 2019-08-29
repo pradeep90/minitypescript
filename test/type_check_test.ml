@@ -69,9 +69,15 @@ let test_fixture = "type_check" >:::
     assert_type_error (fun _ -> type_of [] (Fun ("f", "x", TInt, TBool, Var "x"))) "incompatible types";
     assert_equal (TArrow (TInt, TInt)) (type_of [] (Fun ("f", "x", TInt, TInt, App (Var "f", Var "x"))));
     assert_type_error (fun _ -> type_of [] (Fun ("f", "x", TInt, TInt, App (Var "f", Bool true)))) "incompatible types";
+            );
 
+  "fun_aliases" >:: ( fun () ->
     assert_equal (TArrow (TInt, TInt)) (type_of [("Foo", TInt)] (Fun ("f", "x", TAlias "Foo", TAlias "Foo", App (Var "f", Var "x"))));
-  );
+            );
+
+  "fun_type_params" >:: ( fun () ->
+    assert_equal (TArrow (TParam "Foo", TParam "Foo")) (type_of [] (Fun ("f", "x", TAlias "Foo", TAlias "Foo", Var "x")));
+            );
 
   "let" >:: ( fun () ->
     assert_equal TInt (type_of [("y", TInt)] (Let ("x", Var "y", Var "x")));
@@ -94,14 +100,14 @@ let test_fixture = "type_check" >:::
     assert_type_error (fun _ -> type_of [] (Project (Int 7, "c"))) "record expected";
   );
 
-  "substitute_aliases" >:: ( fun () ->
-    assert_equal TInt (substitute_aliases [] TInt);
-    assert_equal TBool (substitute_aliases [] TBool);
-    assert_equal TInt (substitute_aliases [("bar", TBool); ("foo", TInt)] (TAlias "foo"));
-    assert_equal (TArrow (TInt, TBool)) (substitute_aliases [("bar", TBool); ("foo", TInt)] (TArrow (TAlias "foo", TAlias "bar")));
-    assert_equal (TRecord [("a", TInt); ("b", TBool)]) (substitute_aliases [("bar", TBool); ("foo", TInt)] (TRecord [("a", TAlias "foo"); ("b", TAlias "bar")]));
+  "substitute_aliases_maybe" >:: ( fun () ->
+    assert_equal TInt (substitute_aliases_maybe [] TInt);
+    assert_equal TBool (substitute_aliases_maybe [] TBool);
+    assert_equal TInt (substitute_aliases_maybe [("bar", TBool); ("foo", TInt)] (TAlias "foo"));
+    assert_equal (TArrow (TInt, TBool)) (substitute_aliases_maybe [("bar", TBool); ("foo", TInt)] (TArrow (TAlias "foo", TAlias "bar")));
+    assert_equal (TRecord [("a", TInt); ("b", TBool)]) (substitute_aliases_maybe [("bar", TBool); ("foo", TInt)] (TRecord [("a", TAlias "foo"); ("b", TAlias "bar")]));
 
-    assert_equal (TRecord [("a", TAlias "foo")]) (substitute_aliases [] (TRecord [("a", TAlias "foo")]));
+    assert_equal (TRecord [("a", TAlias "foo")]) (substitute_aliases_maybe [] (TRecord [("a", TAlias "foo")]));
   );
 
   "has_no_aliases" >:: ( fun () ->
@@ -113,6 +119,14 @@ let test_fixture = "type_check" >:::
     assert_equal true (has_no_aliases (TArrow (TInt, TBool)));
     assert_equal false (has_no_aliases (TRecord [("a", TAlias "foo"); ("b", TInt)]));
     assert_equal true (has_no_aliases (TRecord [("a", TInt); ("b", TBool)]));
+ );
+
+  "make_alias_param" >:: ( fun () ->
+    assert_equal TInt (make_alias_param TInt);
+    assert_equal TBool (make_alias_param TBool);
+    assert_equal (TParam "foo") (make_alias_param (TAlias "foo"));
+    assert_equal (TArrow (TParam "foo", TParam "bar")) (make_alias_param (TArrow (TAlias "foo", TAlias "bar")));
+    assert_equal (TRecord [("a", TParam "foo"); ("b", TParam "bar")]) (make_alias_param (TRecord [("a", TAlias "foo"); ("b", TAlias "bar")]));
   );
 ]
 
