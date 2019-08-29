@@ -52,7 +52,10 @@ let rec type_of ctx = function
   | Let (x, e1, e2) -> type_of ((x, type_of ctx e1)::ctx) e2
   | App (e1, e2) ->
       (match type_of ctx e1 with
-	   TArrow (ty1, ty2) -> check ctx e2 ty1; ty2
+	   TArrow (ty1, ty2) ->
+            let unified_ctx = param_constraints ty1 (type_of ctx e2) in
+            check ctx e2 (substitute_params_maybe unified_ctx ty1);
+            (substitute_params_maybe unified_ctx ty2)
 	 | _ -> type_error "function expected")
   | Record rs ->
       check_labels (List.map fst  rs) ;
@@ -67,7 +70,7 @@ let rec type_of ctx = function
 (** [check ctx e ty] checks whether [e] can be given type [ty] in
     context [ctx]. *)
 and check ctx e ty =
-  if not (subtype (type_of ctx e) ty) then type_error "incompatible types"
+  if not (subtype (type_of ctx e) ty) then type_error ("incompatible types; " ^ (string_of_type (type_of ctx e)) ^ " is not a subtype of " ^ (string_of_type ty))
 
 (** [sybtype ty1 ty2] returns [true] if [ty1] is a subtype of [ty2]. *)
 and subtype ty1 ty2 =
@@ -99,6 +102,14 @@ and has_no_aliases ty =
   | TArrow (ty_in, ty_out) -> has_no_aliases ty_in && has_no_aliases ty_out
   | TRecord tss -> List.for_all (fun (l, ty') -> has_no_aliases ty') tss
 
+(** [has_no_parameters ty] returns true iff there are no type parameters within [ty]. *)
+and has_no_parameters ty =
+  match ty with
+  | TInt | TBool | TAlias _ -> true
+  | TParam _ -> false
+  | TArrow (ty_in, ty_out) -> has_no_parameters ty_in && has_no_parameters ty_out
+  | TRecord tss -> List.for_all (fun (l, ty') -> has_no_parameters ty') tss
+
 (** [make_alias_param ty] returns [ty] with type aliases turned into type
    parameters. *)
 and make_alias_param ty =
@@ -107,3 +118,32 @@ and make_alias_param ty =
   | TAlias name -> TParam name
   | TArrow (ty_in, ty_out) -> TArrow (make_alias_param ty_in, make_alias_param ty_out)
   | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, make_alias_param ty')) tss)
+
+(** [param_constraints ty ty_sub] returns the type-parameter constraints
+   needed to unify [ty] and [ty_sub]. All we know is that ty_sub has to be a
+   subtype of ty. *)
+and param_constraints ty ty_sub =
+  if has_no_parameters ty then
+    if has_no_parameters ty_sub then [] else type_error ("subtype " ^ (string_of_type ty_sub) ^ " cannot have parameters when supertype is " ^ (string_of_type ty))
+  else
+    match ty, ty_sub with
+    | TParam p, TInt -> [(p, TInt)]
+    | TParam p, TBool -> [(p, TBool)]
+    | TParam p, TAlias _ -> type_error "alias should not get here"
+    | TParam p, TParam p' when p = p' -> []
+    | TParam p, TParam p' -> type_error ("cannot unify different type parameters " ^ p ^ " and " ^ p')
+    | TParam p, TArrow (ty_in, ty_out) -> [(p, ty_sub)]
+    | TParam p, TRecord xs -> [(p, ty_sub)]
+    | TRecord xs, TRecord ys -> List.concat (List.map (fun (l1, ty1) -> param_constraints ty1 (lookup_type l1 ys)) xs)
+    | TArrow (ty_in1, ty_out1), TArrow (ty_in2, ty_out2) -> (param_constraints ty_in2 ty_in1) @ (param_constraints ty_out1 ty_out2)
+    | _, _ -> type_error ("cannot unify " ^ string_of_type ty ^ " and " ^ string_of_type ty_sub)
+
+
+(** [substitute_params_maybe ctx ty] returns [ty] with type parameters replaced by
+   their definitions from [ctx], if available. *)
+and substitute_params_maybe ctx ty =
+  match ty with
+  | TInt | TBool | TAlias _ -> ty
+  | TParam name -> (try List.assoc name ctx with Not_found -> ty)
+  | TArrow (ty_in, ty_out) -> TArrow (substitute_params_maybe ctx ty_in, substitute_params_maybe ctx ty_out)
+  | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, substitute_params_maybe ctx ty')) tss)
