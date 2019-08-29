@@ -24,7 +24,7 @@ module MiniTypeScript = Zoo.Main(struct
     | Syntax.TypeDecl (x, ty_expr) ->
        let ty_concrete = Type_check.substitute_aliases ctx ty_expr in
         Zoo.print_info "typedecl %s : %s@." x (Syntax.string_of_type ty_concrete) ;
-        assert (Type_check.is_concrete ty_concrete);
+        assert (Type_check.has_no_aliases ty_concrete);
         ((x,ty_concrete) :: ctx, env)
 
 end) ;;

@@ -101,18 +101,17 @@ let test_fixture = "type_check" >:::
     assert_equal (TArrow (TInt, TBool)) (substitute_aliases [("bar", TBool); ("foo", TInt)] (TArrow (TAlias "foo", TAlias "bar")));
     assert_equal (TRecord [("a", TInt); ("b", TBool)]) (substitute_aliases [("bar", TBool); ("foo", TInt)] (TRecord [("a", TAlias "foo"); ("b", TAlias "bar")]));
 
-    assert_type_error (fun _ -> substitute_aliases [] (TRecord [("a", TAlias "foo")])) "unknown variable foo";
   );
 
-  "is_concrete" >:: ( fun () ->
-    assert_equal true (is_concrete TInt);
-    assert_equal true (is_concrete TBool);
-    assert_equal false (is_concrete (TAlias "foo"));
-    assert_equal false (is_concrete (TArrow (TAlias "foo", TInt)));
-    assert_equal false (is_concrete (TArrow (TInt, TAlias "foo")));
-    assert_equal true (is_concrete (TArrow (TInt, TBool)));
-    assert_equal false (is_concrete (TRecord [("a", TAlias "foo"); ("b", TInt)]));
-    assert_equal true (is_concrete (TRecord [("a", TInt); ("b", TBool)]));
+  "has_no_aliases" >:: ( fun () ->
+    assert_equal true (has_no_aliases TInt);
+    assert_equal true (has_no_aliases TBool);
+    assert_equal false (has_no_aliases (TAlias "foo"));
+    assert_equal false (has_no_aliases (TArrow (TAlias "foo", TInt)));
+    assert_equal false (has_no_aliases (TArrow (TInt, TAlias "foo")));
+    assert_equal true (has_no_aliases (TArrow (TInt, TBool)));
+    assert_equal false (has_no_aliases (TRecord [("a", TAlias "foo"); ("b", TInt)]));
+    assert_equal true (has_no_aliases (TRecord [("a", TInt); ("b", TBool)]));
   );
 ]
 

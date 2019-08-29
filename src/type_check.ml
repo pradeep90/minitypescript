@@ -85,15 +85,15 @@ and subtype ty1 ty2 =
 (** [substitute_aliases ctx ty] returns [ty] with type aliases replaced by their definitions from [ctx]. *)
 and substitute_aliases ctx ty =
   match ty with
-  | TInt | TBool -> ty
+  | TInt | TBool | TParam _ -> ty
   | TAlias name -> lookup_type name ctx
   | TArrow (ty_in, ty_out) -> TArrow (substitute_aliases ctx ty_in, substitute_aliases ctx ty_out)
   | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, substitute_aliases ctx ty')) tss)
 
-(** [is_concrete ty] returns true iff there are no type aliases within [ty]. *)
-and is_concrete ty =
+(** [has_no_aliases ty] returns true iff there are no type aliases within [ty]. *)
+and has_no_aliases ty =
   match ty with
-  | TInt | TBool -> true
+  | TInt | TBool | TParam _ -> true
   | TAlias _ -> false
-  | TArrow (ty_in, ty_out) -> is_concrete ty_in && is_concrete ty_out
-  | TRecord tss -> List.for_all (fun (l, ty') -> is_concrete ty') tss
+  | TArrow (ty_in, ty_out) -> has_no_aliases ty_in && has_no_aliases ty_out
+  | TRecord tss -> List.for_all (fun (l, ty') -> has_no_aliases ty') tss
