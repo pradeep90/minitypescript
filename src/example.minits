@@ -17,4 +17,13 @@ plus u (conjugate u)
 ;;
 
 conjugate {re = 5, im = 7, foo = {}, bar = conjugate}
+;;
 
+type Foo = int
+;;
+
+let increment = fun f(x: Foo): Foo is x + 1
+
+;;
+
+increment 3

@@ -41,6 +41,7 @@ file:
   | EOF                      { [] }
   | filedef                  { $1 }
   | fileexpr                 { $1 }
+  | filetypedecl             { $1 }
 
 filedef:
   | def EOF                  { [$1] }
@@ -50,6 +51,11 @@ filedef:
 fileexpr:
   | expr EOF                 { [Expr $1] }
   | expr SEMICOLON2 file     { Expr $1 :: $3 }
+
+filetypedecl:
+  | typedecl EOF             { [$1] }
+  | typedecl SEMICOLON2 file { $1 :: $3 }
+  | typedecl filetypedecl    { $1 :: $2 }
 
 toplevel:
   | expr EOF                 { Expr $1 }
