@@ -91,6 +91,14 @@ let test_fixture = "type_check" >:::
     assert_type_error (fun _ -> type_of [] (Project (Record [("a", Int 7); ("b", Record [("c", Bool true)])], "c"))) "no such field c";
     assert_type_error (fun _ -> type_of [] (Project (Int 7, "c"))) "record expected";
   );
+
+  "substitute_aliases" >:: ( fun () ->
+    assert_equal TInt (substitute_aliases [] TInt);
+    assert_equal TBool (substitute_aliases [] TBool);
+    assert_equal TInt (substitute_aliases [("bar", TBool); ("foo", TInt)] (TAlias "foo"));
+    assert_equal (TArrow (TInt, TBool)) (substitute_aliases [("bar", TBool); ("foo", TInt)] (TArrow (TAlias "foo", TAlias "bar")));
+    assert_equal (TRecord [("a", TInt); ("b", TBool)]) (substitute_aliases [("bar", TBool); ("foo", TInt)] (TRecord [("a", TAlias "foo"); ("b", TAlias "bar")]));
+  );
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)

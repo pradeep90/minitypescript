@@ -26,9 +26,9 @@ let lookup_type x ctx =
 let rec type_of ctx = function
     Var x -> lookup_type x ctx
   | Int _ -> TInt
-  | Plus (e1, e2) 
-  | Minus (e1, e2) 
-  | Times (e1, e2) 
+  | Plus (e1, e2)
+  | Minus (e1, e2)
+  | Times (e1, e2)
   | Divide (e1, e2) -> check ctx e1 TInt; check ctx e2 TInt; TInt
   | Bool _ -> TBool
   | Equal (e1, e2)
@@ -79,3 +79,11 @@ and subtype ty1 ty2 =
 	     ts2
        | _, _ -> false
     )
+
+(** [substitute_aliases ctx ty] returns [ty] with type aliases replaced by their definitions from [ctx]. *)
+and substitute_aliases ctx ty =
+  match ty with
+  | TInt | TBool -> ty
+  | TAlias name -> lookup_type name ctx
+  | TArrow (ty_in, ty_out) -> TArrow (substitute_aliases ctx ty_in, substitute_aliases ctx ty_out)
+  | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, substitute_aliases ctx ty')) tss)
