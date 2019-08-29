@@ -2,7 +2,13 @@
 
 + Generic type with syntax. What would its subtyping relation look like? Foo a === record with a in the right places.
 
-+ Nested generic types. Tuples - basically Pair<a,b>.
++ Nested generic types. Tuples - basically Pair<A,B>. Maybe you can get this using Container<{a: A, b: B}>.
+
++ Strings as keys for records.
+
++ Lists! Maybe use strings as indices - ix0, ix1, etc.
+
++ Prove soundness.
 
 + What would it take to have higher-kinded types?
 
