@@ -87,3 +87,11 @@ and substitute_aliases ctx ty =
   | TAlias name -> lookup_type name ctx
   | TArrow (ty_in, ty_out) -> TArrow (substitute_aliases ctx ty_in, substitute_aliases ctx ty_out)
   | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, substitute_aliases ctx ty')) tss)
+
+(** [is_concrete ty] returns true iff there are no type aliases within [ty]. *)
+and is_concrete ty =
+  match ty with
+  | TInt | TBool -> true
+  | TAlias _ -> false
+  | TArrow (ty_in, ty_out) -> is_concrete ty_in && is_concrete ty_out
+  | TRecord tss -> List.for_all (fun (l, ty') -> is_concrete ty') tss

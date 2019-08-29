@@ -99,6 +99,17 @@ let test_fixture = "type_check" >:::
     assert_equal (TArrow (TInt, TBool)) (substitute_aliases [("bar", TBool); ("foo", TInt)] (TArrow (TAlias "foo", TAlias "bar")));
     assert_equal (TRecord [("a", TInt); ("b", TBool)]) (substitute_aliases [("bar", TBool); ("foo", TInt)] (TRecord [("a", TAlias "foo"); ("b", TAlias "bar")]));
   );
+
+  "is_concrete" >:: ( fun () ->
+    assert_equal true (is_concrete TInt);
+    assert_equal true (is_concrete TBool);
+    assert_equal false (is_concrete (TAlias "foo"));
+    assert_equal false (is_concrete (TArrow (TAlias "foo", TInt)));
+    assert_equal false (is_concrete (TArrow (TInt, TAlias "foo")));
+    assert_equal true (is_concrete (TArrow (TInt, TBool)));
+    assert_equal false (is_concrete (TRecord [("a", TAlias "foo"); ("b", TInt)]));
+    assert_equal true (is_concrete (TRecord [("a", TInt); ("b", TBool)]));
+  );
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)
