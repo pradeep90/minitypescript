@@ -22,9 +22,10 @@ module MiniTypeScript = Zoo.Main(struct
         Zoo.print_info "val %s : %s = %s@." x (Syntax.string_of_type ty) (Syntax.string_of_value v) ;
         ((x,ty) :: ctx, (x,v) :: env)
     | Syntax.TypeDecl (x, ty_expr) ->
-        Zoo.print_info "typedecl %s : %s@." x (Syntax.string_of_type ty_expr) ;
-        assert (Type_check.is_concrete ty_expr);
-        ((x,ty_expr) :: ctx, env)
+       let ty_concrete = Type_check.substitute_aliases ctx ty_expr in
+        Zoo.print_info "typedecl %s : %s@." x (Syntax.string_of_type ty_concrete) ;
+        assert (Type_check.is_concrete ty_concrete);
+        ((x,ty_concrete) :: ctx, env)
 
 end) ;;
 

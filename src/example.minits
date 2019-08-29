@@ -20,10 +20,18 @@ conjugate {re = 5, im = 7, foo = {}, bar = conjugate}
 ;;
 
 type Foo = int
+type BarRecord = {a: Foo, b: {c: Foo, d: bool}}
 ;;
 
 let increment = fun f(x: Foo): Foo is x + 1
+;;
+
+let create_bar_record = fun g(x: bool): BarRecord is {a = 1, b = {c = 2, d = x}}
 
 ;;
 
 increment 3
+
+;;
+
+create_bar_record true
