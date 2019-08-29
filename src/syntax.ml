@@ -12,6 +12,7 @@ type ty =
   | TBool (** boolean values [bool] *)
   | TArrow of ty * ty (** function types [ty1 -> ty2] *)
   | TRecord of (label * ty) list (** records [{l1:ty1, ..., lN:tyN}] *)
+  | TAlias of name (** type alias from type declaration [Car] *)
 
 (** Expressions *)
 type expr =
@@ -57,6 +58,7 @@ let string_of_type ty =
 	       (List.map (fun (l,t) -> l ^ " : " ^ (to_str (-1) t)) ts) ^
 	       "}")
 	| TArrow (ty1, ty2) -> (1, (to_str 1 ty1) ^ " -> " ^ (to_str 0 ty2))
+        | TAlias name -> (4, name)
     in
       if m > n then str else "(" ^ str ^ ")"
   in

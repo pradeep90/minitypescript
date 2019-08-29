@@ -110,6 +110,7 @@ ty:
     TBOOL	 	     { TBool }
   | TINT         	     { TInt }
   | ty TARROW ty             { TArrow ($1, $3) }
+  | VAR                      { TAlias ($1) }
   | LBRACE RBRACE            { TRecord [] }
   | LBRACE trecord_list RBRACE { TRecord $2 }
   | LPAREN ty RPAREN         { $2 }
