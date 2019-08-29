@@ -17,6 +17,7 @@
 %token LET IN
 %token SEMICOLON2
 %token EOF
+%token TYPEDECL
 
 %start toplevel
 %start file
@@ -53,6 +54,7 @@ fileexpr:
 toplevel:
   | expr EOF                 { Expr $1 }
   | def EOF                  { $1 }
+  | typedecl EOF             { $1 }
 
 def:
   | LET VAR EQUAL expr { Def ($2, $4) }
@@ -66,6 +68,9 @@ expr:
   | IF expr THEN expr ELSE expr	       { If ($2, $4, $6) }
   | FUN VAR LPAREN VAR COLON ty RPAREN COLON ty IS expr { Fun ($2, $4, $6, $9, $11) }
 
+typedecl:
+  | TYPEDECL VAR EQUAL ty   { TypeDecl ($2, $4) }
+
 app:
     app non_app         { App ($1, $2) }
   | non_app non_app     { App ($1, $2) }
@@ -75,7 +80,7 @@ non_app:
   | TRUE                	  { Bool true }
   | FALSE               	  { Bool false }
   | INT		                  { Int $1 }
-  | LPAREN expr RPAREN		  { $2 }    
+  | LPAREN expr RPAREN		  { $2 }
   | LBRACE RBRACE               { Record [] }
   | LBRACE record_list RBRACE   { Record $2 }
   | non_app PERIOD VAR          { Project ($1, $3) }

@@ -21,6 +21,9 @@ module MiniTypeScript = Zoo.Main(struct
         let v = Eval.eval env e in
         Zoo.print_info "val %s : %s = %s@." x (Syntax.string_of_type ty) (Syntax.string_of_value v) ;
         ((x,ty) :: ctx, (x,v) :: env)
+    | Syntax.TypeDecl (x, ty_expr) ->
+        Zoo.print_info "typedecl %s : %s@." x (Syntax.string_of_type ty_expr) ;
+        ((x,ty_expr) :: ctx, env)
 
 end) ;;
 

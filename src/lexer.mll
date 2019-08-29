@@ -26,11 +26,12 @@ rule token = parse
   | "in"            { IN }
   | "is"            { IS }
   | "int"           { TINT }
-  | "let"           { LET }  
+  | "let"           { LET }
   | "not"           { NOT }
   | "or"            { OR }
   | "then"          { THEN }
   | "true"          { TRUE }
+  | "type"          { TYPEDECL }
   | ";;"            { SEMICOLON2 }
   | '('             { LPAREN }
   | ')'             { RPAREN }
