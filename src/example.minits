@@ -35,3 +35,27 @@ increment 3
 ;;
 
 create_bar_record true
+
+;;
+
+let id = fun f(x: A): A is x
+;;
+
+id 3;;
+id true;;
+id {a = 1};;
+id id;;
+
+let const = fun f(x: A): B -> A is fun g(y: B): A is x
+;;
+const 1 2;;
+const true 3;;
+const 7 id;;
+
+let compose = fun f1(f: B -> C): (A -> B) -> (A -> C) is
+    fun f2(g: A -> B): A -> C is
+    	fun f3(x: A): C is
+	    f (g x)
+;;
+
+compose increment increment 3
