@@ -53,7 +53,7 @@ let rec type_of ctx = function
   | App (e1, e2) ->
       (match type_of ctx e1 with
 	   TArrow (ty1, ty2) ->
-            let unified_ctx = param_constraints ty1 (type_of ctx e2) in
+            let unified_ctx = unify_constraints [] (param_constraints ty1 (type_of ctx e2)) in
             check ctx e2 (substitute_params_maybe unified_ctx ty1);
             (substitute_params_maybe unified_ctx ty2)
 	 | _ -> type_error "function expected")
@@ -123,8 +123,7 @@ and make_alias_param ty =
    needed to unify [ty] and [ty_sub]. All we know is that ty_sub has to be a
    subtype of ty. *)
 and param_constraints ty ty_sub =
-  if has_no_parameters ty then
-    if has_no_parameters ty_sub then [] else type_error ("subtype " ^ (string_of_type ty_sub) ^ " cannot have parameters when supertype is " ^ (string_of_type ty))
+  if has_no_parameters ty && has_no_parameters ty_sub then []
   else
     match ty, ty_sub with
     | TParam p, TInt -> [(p, TInt)]
@@ -134,6 +133,7 @@ and param_constraints ty ty_sub =
     | TParam p, TParam p' -> type_error ("cannot unify different type parameters " ^ p ^ " and " ^ p')
     | TParam p, TArrow (ty_in, ty_out) -> [(p, ty_sub)]
     | TParam p, TRecord xs -> [(p, ty_sub)]
+    | _, TParam _ -> param_constraints ty_sub ty
     | TRecord xs, TRecord ys -> List.concat (List.map (fun (l1, ty1) -> param_constraints ty1 (lookup_type l1 ys)) xs)
     | TArrow (ty_in1, ty_out1), TArrow (ty_in2, ty_out2) -> (param_constraints ty_in2 ty_in1) @ (param_constraints ty_out1 ty_out2)
     | _, _ -> type_error ("cannot unify " ^ string_of_type ty ^ " and " ^ string_of_type ty_sub)
