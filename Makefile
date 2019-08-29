@@ -26,5 +26,8 @@ test:
 	./eval_test.native
 	./type_check_test.native
 
+example: all
+	./minitypescript.native $(SRCDIR)/example.minits
+
 clean:
 	$(OCAMLBUILD) -clean
