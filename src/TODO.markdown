@@ -156,6 +156,34 @@ function getProperty<T, K extends keyof T>(o: T, propertyName: K): T[K] {
 
 they specified the fact that `K extends keyof T`. So, that fact was somehow known before this function was reached; probably by looking at the string literals. I guess they can get away with it because they don't have to infer anything. Otherwise, when you said `o[n]`, they would have to infer the condition `K extends keyof T`, just like Haskell infers the condition `Show a` when you ask it to type `f x = show x`, so that you get the overall type `f :: Show a => a -> String`.
 
+## String Literals in TypeScript
+
+Changed the `pluck` example from
+
+```typescript
+let makeAndModel: string[] = pluck(taxi, ['manufacturer', 'model']);
+```
+
+to
+
+```typescript
+let s = 'man';
+let s2 = 'ufacturer';
+let makeAndModel: string[] = pluck(taxi, [s + s2, 'model']);
+```
+
+Got:
+
+> Type 'string' is not assignable to type '"model" | "manufacturer" | "year"'.
+
+The same for
+
+```typescript
+let makeAndModel: string[] = pluck(taxi, ['manuf' + 'acturer', 'model']);
+```
+
+So, TypeScript can't just handle any string as a type, even though the output is literally the same as the literal type "manufacturer". I'm guessing it doesn't have full-on dependent typing in the sense of types being determined by values. It's more about types being indexed by types. If so, System F-omega should be enough to handle it.
+
 ## System F
 
 + System F requires this: "if a function has a polymorphic type then type applications must be explicitly indicated." (Theorems for Free paper)
@@ -167,6 +195,8 @@ Polymorphic types should be represented as `forall` so that you can instantiate 
 # System F-omega
 
 Don't know if I need this.
+
+Maybe have a separate pure implementation of System F-omega so that you can look at the differences between that and your ad hoc mini-TypeScript implementation.
 
 ## Algebraic Data Types (ADTs)
 
