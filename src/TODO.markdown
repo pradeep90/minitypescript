@@ -72,6 +72,28 @@ function foo<U>(x: U) {
 
 I would have thought that the type of `a` would be `string | number`. They say it's `U extends Foo ? string : number`. But by the time you apply `foo` to an argument `x`, you would have got some more information about `U`, so that if you know x's type extends `Foo`, then `a` would automatically get the type `string`, and if x's type doesn't extend `Foo`, then `a` would get `number`. I don't think you have to carry around the extra part about `U extends Foo ?`. You can just say `string | number`.
 
++ Another use case for GADTs:
+
+```haskell
+Fun :: (Lam a -> Lam b) -> Lam (a -> b)
+App :: Lam (a -> b) -> Lam a -> Lam b
+
+data Lam T
+ = forall b c . Fun (Lam b -> Lam c) with T = b -> c
+| forall a . App (Lam (a -> T )) (Lam a)
+
+reduce :: Lam b -> Lam b
+reduce (App (Fun f ) t) = f t
+```
+
+Source: First-class Phantom Types, Cheney et al, page 4.
+
+The aim is that you say that the input type of `reduce` is `Lam b` and the typechecker knows that it must have been constructed by `App` (since `Fun` returns `Lam (a -> b)`, not `Lam b`).
+
+I guess you could still have a dead case-branch for `Fun`, for fun. The idea is that once you know you're in an `App` branch, you know that the two arguments must have been of types `Lam (a -> b)` and `Lam a`. Once you can type-match against the full type, I don't think there's any ambiguity left.
+
+My only question is: what to do when there are two branches of the same type, like `Int -> Int | Int -> Int`? Wait, that's pointless! There's nothing new you're inferring about the two branches. When it comes to `Int -> Int | Int -> Bool`, you can tell that the result of the first branch is an `Int` and that of the second is `Bool`. Useful information. But `Int -> Int | Int -> Int` in logic is basically `Int => Int || Int => Int`, which is just `Int => Int`.
+
 + conditional types: (I'm guessing this is like the smart pattern-matching of GADTs)
 
 ```typescript
