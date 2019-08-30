@@ -9,6 +9,12 @@
 
 Make the logical inference explicit.
 
+`subtype` is probably implies.
+
+Remove the other features from the ast. Implement bool using ADTs. `plus`, `and`, etc. should be built-in functions with their built-in implications. `if` should be pattern-matching on Bool.
+
+Constructors are used to introduce a type or proposition. Pattern matches are used to eliminate disjunctions and conjunctions (via deconstruction).
+
 ## Conditional types
 
 + `eval` example for GADTs.
@@ -133,6 +139,8 @@ they specified the fact that `K extends keyof T`. So, that fact was somehow know
 + System F requires this: "if a function has a polymorphic type then type applications must be explicitly indicated." (Theorems for Free paper)
 
 I guess I'm currently *inferring* the types. That's why I had to write a `unify` function to solve the constraints.
+
+Polymorphic types should be represented as `forall` so that you can instantiate them. For a normal parameter, the argument type has to imply the parameter type. But for a type parameter, it just instantiates the parameter. For multiple matches in a function type, look for subtype relations. A failure would be A -> a being a super type of x,y -> x. Int <= X <= int, means x is int.
 
 # System F-omega
 
