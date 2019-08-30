@@ -121,6 +121,12 @@ type Cat = ExtractCat<Animal>
 
 This looks like the predicate "A is in `Animal` and A has field `meow` => A is in `ExtractCat<Animal>`". So, if someone tries to expect `fins` when given `ExtractCat<Animal>`, you can throw a type error because none of the animals that satisfy the predicate of `ExtractCat<Animal>` have the field `fins`.
 
+Other type predicates you could have are `isArgument Int` or `isReturnType Bool` or `isFunction` or `not`.
+
+Wow, you'll probably need some way of composing predicates. Wait. A predicate is nothing but a higher-kinded type, basically a type operator. `List` takes `Int` and returns `List Int`. `ExtractCat` takes `Animal` and returns another type. That would mean that even `|` is a type operator, albeit of a higher kind. It takes two type operators and returns a new type operator.
+
+Question: Can the typechecker learn that `A | B` means that `A or B` must be true? Will find out.
+
 + mapped types
 
 ```typescript
