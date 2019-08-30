@@ -138,6 +138,8 @@ type Test = ExcludeTypeField<{ type: "LOG_IN"; emailAddress: string }>
 
 I guess his example makes the type of the second argument depend on the type of the first argument.
 
+Continuing with the System F-omega theme, I'm guessing `keyof` is another type operator. There seems to be some syntactic sugar to represent mapping over the set of keys, but I think the basic idea is the same.
+
 + index type query and index access operators: `function pluck<T, K extends keyof T>(o: T, propertyNames: K[]): T[K][] {return propertyNames.map(n => o[n]);}`
 
 My language would probably have the type signature as: `fun pluck(o: T, propertyNames: K[]): K extends keyof T => T[K][]`. The corresponding implication would probably be `T and K[] and K extends keyof T => T[K][]`.
