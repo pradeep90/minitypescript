@@ -1,5 +1,15 @@
 
-# Typescript Feature Wish list
+# TypeScript Feature Wish list
+
+## Usability
+
++ Have a flag for toggling the type of type system.
+
+## Organize the typechecker like a theorem-prover
+
+Make the logical inference explicit.
+
+## Conditional types
 
 + `eval` example for GADTs.
 
@@ -20,6 +30,8 @@ eval (Add x y) = (eval x) + (eval y)
 --  eval (Add (I 10) (I 12))
 ```
 
+(Contrast it to the non-GADT version.)
+
 Source: Haskell Design Patterns by Ryan Lemmer
 
 GADTs let you treat the result of `eval (Add ...)`  as the integer it is instead of treating it like some abstract type `t`.
@@ -30,15 +42,29 @@ Hmm... So, the type `Int -> Bool` is really the logical implication `input type 
 
 When you want three functions with the same name and overall input type but different return types, make their type signature `A1 -> B1 | A2 -> B2 | A3 -> B3` so that it's easier to typecheck. (I guess the problem for Haskell would have been in inferring, not in typechecking.)
 
-I guess `match foo with | A1 -> ... | A2 -> ... | A3 -> ...` indexes into the above type union.
+I guess `typematch x with | A1 -> ... | A2 -> ... | A3 -> ...` indexes into the above type union. Well, it tells you the type of the first argument, which allows you to narrow down the type.
 
-I'm also guessing that you can use the same technique to implement algebraic data types. Except there, the index for the union won't be the type of the function's first parameter, it will be the name of the constructor, which is conveniently a string and a type in TypeScript.
+Workflow would be: declare a type for the function (`f :: Int -> String | Bool -> String`); match on the argument (`typematch x with | Int -> ... | Bool -> ...`). An outsider can't tell which type the function is. All he can do is pass in either an Int or a Bool.
 
-+ exhaustiveness checking for ADTs: `match x with | Nil => 1 | Cons a b => 2;;`
+However, can you also call it from a function that takes in as argument `String | Bool`, so that you get a result of type `String`?
 
-Once you know about the multi-branch implication idea, ADTs probably just consist of variants indexed by their name.
+What are the differences between `(Int | Bool) -> (Int | Bool)` and `(Int -> Int) | (Bool -> Bool)`? The former can return a value of either type; the latter can't. The latter allows you to infer that an input of `Int` will give an output of `Int`; the former doesn't. This is what TypeScript allows with `function process<T extends string | null>(text: T): T extends string ? string : null {}`. This is probably what GADTs give you. Finally, both can accept an input of type `string | null`, such as `process(maybeFoo)`.
 
-You should probably be able to infer specific output types where possible. Suppose `let f z xs = match xs with | Nil -> Nil | Cons y ys -> Cons z ys`. Then, `headStrict (f 3 (Cons 1 Nil))` should typecheck, where `headStrict :: Cons a [a] -> a`. On the other hand, `headStrict Nil` should not.
+Another example from the Advanced Types page:
+
+```typescript
+declare function f<T>(x: T): T extends Foo ? string : number;
+
+function foo<U>(x: U) {
+    // Has type 'U extends Foo ? string : number'
+    let a = f(x);
+
+    // This assignment is allowed though!
+    let b: string | number = a;
+}
+```
+
+I would have thought that the type of `a` would be `string | number`. They say it's `U extends Foo ? string : number`. But by the time you apply `foo` to an argument `x`, you would have got some more information about `U`, so that if you know x's type extends `Foo`, then `a` would automatically get the type `string`, and if x's type doesn't extend `Foo`, then `a` would get `number`. I don't think you have to carry around the extra part about `U extends Foo ?`. You can just say `string | number`.
 
 + conditional types: (I'm guessing this is like the smart pattern-matching of GADTs)
 
