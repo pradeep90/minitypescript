@@ -1,48 +1,5 @@
-# Functional Programming Feature Wish List
-
-+ Generic type with syntax. What would its subtyping relation look like? Foo a === record with a in the right places.
-
-+ Nested generic types. Tuples - basically Pair<A,B>. Maybe you can get this using Container<{a: A, b: B}>.
-
-+ Strings as keys for records.
-
-+ Lists! Maybe use strings as indices - ix0, ix1, etc.
-
-+ Prove soundness.
-
-+ What would it take to have higher-kinded types?
-
-+ After conditional types are done, show that `f . g $ x` works by showing that the type of `g string` is `string`, not `string | null`.
-
-+ Type class?
-
-+ Try implementing functors.
-
-+ Maybe.
-
-+ Either.
-
-+ What would it take to do type level computation, such as evaluation? Get an example.
-
-+ Other features: higher rank types - for all a, a -> string.
 
 # Typescript Feature Wish list
-
-+ Intersection type: `Person & Loggable` (has a log function field). Optional.
-
-+ Union type: `pet: Bird | Fish; pet.numEggs() but not pet.numFins()`
-
-+ self-referential types: `type LinkedList<T> = T & { next: LinkedList<T> };`
-
-+ exhaustiveness checking for ADTs: `match x with | Nil => 1 | Cons a b => 2;;`
-
-+ Field names as constant types
-
-+ in operator: `function move(pet: Fish | Bird) {if ("swim" in pet) {return pet.swim();} return pet.fly();}`
-
-+ generic types: `type Container<T> = { value: T };`
-
-+ index type query and index access operators: `function pluck<T, K extends keyof T>(o: T, propertyNames: K[]): T[K][] {return propertyNames.map(n => o[n]);}`
 
 + `eval` example for GADTs.
 
@@ -145,3 +102,32 @@ they specified the fact that `K extends keyof T`. So, that fact was somehow know
 
 + Other type-level computations, such as a mini-interpreter.
 
+# Functional Programming Feature Wish List
+
++ Union type: `pet: Bird | Fish` - allow `pet.numEggs()` but not `pet.numFins()`.
+
++ Generic type with syntax.
+
++ Nested generic types. Tuples - basically Pair<A,B>. Maybe you can get this using Container<{a: A, b: B}>.
+
++ Strings as keys for records.
+
++ in operator: `function move(pet: Fish | Bird) {if ("swim" in pet) {return pet.swim();} return pet.fly();}`
+
++ generic types: `type Container<T> = { value: T };`
+
++ Lists! Maybe use strings as indices - ix0, ix1, etc.
+
++ Prove soundness.
+
++ What would it take to have higher-kinded types?
+
++ Type class
+
++ Try implementing functors. Can you prove the functor laws?
+
++ Intersection type: `Person & Loggable` (has a log function field). Optional.
+
++ self-referential types: `type LinkedList<T> = T & { next: LinkedList<T> };`
+
++ Other features: higher rank types - for all a, a -> string.
