@@ -128,6 +128,40 @@ function getProperty<T, K extends keyof T>(o: T, propertyName: K): T[K] {
 
 they specified the fact that `K extends keyof T`. So, that fact was somehow known before this function was reached; probably by looking at the string literals. I guess they can get away with it because they don't have to infer anything. Otherwise, when you said `o[n]`, they would have to infer the condition `K extends keyof T`, just like Haskell infers the condition `Show a` when you ask it to type `f x = show x`, so that you get the overall type `f :: Show a => a -> String`.
 
+## System F
+
++ System F requires this: "if a function has a polymorphic type then type applications must be explicitly indicated." (Theorems for Free paper)
+
+I guess I'm currently *inferring* the types. That's why I had to write a `unify` function to solve the constraints.
+
+# System F-omega
+
+Don't know if I need this.
+
+## Algebraic Data Types (ADTs)
+
++ I've already got product types in the form of records.
+
++ How to get sum types? I need something for deconstructing a union like `True | False`. I could encode the names as string literals and thus types.
+
++ Polymorphic data types
+
+One option is to go for full System F-omega so that you can type operators like `List`. Another option is to use `|` to have unions of different types, such as `{a: Bool} | {c: Int}`. How will you type-match them, though? You could use the entire type as such.
+
+TypeScript uses a special field called `kind` to represent the name of the variant in an ADT:
+
+```typescript
+function area(s: Shape) {
+    switch (s.kind) {
+        case "square": return s.size * s.size;
+        case "rectangle": return s.height * s.width;
+        case "circle": return Math.PI * s.radius ** 2;
+    }
+}
+```
+
+## Type-level Programming
+
 + Peano arithmetic: Logically, I know that `Add (Succ n) m -> Succ (Add n m)`. How to express that?
 
 + Sized vector: Can you implement a sized vector type? What kind of errors can it catch at compile time? Just empty lists when a non empty one was expected? Can it ask for anything more specific, like... Oh, two lists of the same size? Then one list with size greater than the other? Look at the prelude for ideas about size constraints.
@@ -152,7 +186,7 @@ they specified the fact that `K extends keyof T`. So, that fact was somehow know
 
 + Prove soundness.
 
-+ What would it take to have higher-kinded types?
++ What would it take to have higher-kinded types? (Answer: System F-omega)
 
 + Type class
 
@@ -161,5 +195,3 @@ they specified the fact that `K extends keyof T`. So, that fact was somehow know
 + Intersection type: `Person & Loggable` (has a log function field). Optional.
 
 + self-referential types: `type LinkedList<T> = T & { next: LinkedList<T> };`
-
-+ Other features: higher rank types - for all a, a -> string.
