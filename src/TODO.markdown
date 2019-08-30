@@ -34,6 +34,12 @@ I guess `match foo with | A1 -> ... | A2 -> ... | A3 -> ...` indexes into the ab
 
 I'm also guessing that you can use the same technique to implement algebraic data types. Except there, the index for the union won't be the type of the function's first parameter, it will be the name of the constructor, which is conveniently a string and a type in TypeScript.
 
++ exhaustiveness checking for ADTs: `match x with | Nil => 1 | Cons a b => 2;;`
+
+Once you know about the multi-branch implication idea, ADTs probably just consist of variants indexed by their name.
+
+You should probably be able to infer specific output types where possible. Suppose `let f z xs = match xs with | Nil -> Nil | Cons y ys -> Cons z ys`. Then, `headStrict (f 3 (Cons 1 Nil))` should typecheck, where `headStrict :: Cons a [a] -> a`. On the other hand, `headStrict Nil` should not.
+
 + conditional types: (I'm guessing this is like the smart pattern-matching of GADTs)
 
 ```typescript
