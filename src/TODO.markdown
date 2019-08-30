@@ -120,3 +120,28 @@ type Test = ExcludeTypeField<{ type: "LOG_IN"; emailAddress: string }>
 ```
 
 I guess his example makes the type of the second argument depend on the type of the first argument.
+
++ index type query and index access operators: `function pluck<T, K extends keyof T>(o: T, propertyNames: K[]): T[K][] {return propertyNames.map(n => o[n]);}`
+
+My language would probably have the type signature as: `fun pluck(o: T, propertyNames: K[]): K extends keyof T => T[K][]`. The corresponding implication would probably be `T and K[] and K extends keyof T => T[K][]`.
+
+This probably follows from the lower-level implication about `o: T and n: K and K extends keyof T => o[n]: T[K]`. Follow that up with the property of map (or its type, if you will), i.e., `f: a -> b and xs: a[] => f xs: b[]`, and you will get the return type `T[K][]`.
+
+How do you tell it that an array `propertyNames` is of the appropriate type `K` such that `K extends keyof T`? You would probably have to either construct it using constant symbols that can be checked to be keys of T or you would have to have got the property names from some method that extracted them from T. Maybe `filterProperties(o: T, f: String -> Bool): [String]`. Would it realize that the strings came from the keys of `T` (because you used `o.keys`) or will you have to specify that? The Car example on the TypeScript webpage used literal strings.
+
+At least in this example:
+
+```typescript
+function getProperty<T, K extends keyof T>(o: T, propertyName: K): T[K] {
+    return o[propertyName]; // o[propertyName] is of type T[K]
+}
+```
+
+they specified the fact that `K extends keyof T`. So, that fact was somehow known before this function was reached; probably by looking at the string literals. I guess they can get away with it because they don't have to infer anything. Otherwise, when you said `o[n]`, they would have to infer the condition `K extends keyof T`, just like Haskell infers the condition `Show a` when you ask it to type `f x = show x`, so that you get the overall type `f :: Show a => a -> String`.
+
++ Peano arithmetic: Logically, I know that `Add (Succ n) m -> Succ (Add n m)`. How to express that?
+
++ Sized vector: Can you implement a sized vector type? What kind of errors can it catch at compile time? Just empty lists when a non empty one was expected? Can it ask for anything more specific, like... Oh, two lists of the same size? Then one list with size greater than the other? Look at the prelude for ideas about size constraints.
+
++ Other type-level computations, such as a mini-interpreter.
+
