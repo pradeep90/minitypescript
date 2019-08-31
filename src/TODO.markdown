@@ -206,6 +206,199 @@ Don't know if I need this.
 
 Maybe have a separate pure implementation of System F-omega so that you can look at the differences between that and your ad hoc mini-TypeScript implementation.
 
+Check in the online interpreter (https://crypto.stanford.edu/~blynn/lambda/typo.html) if you can encode something like a GADT in System F-omega.
+
+I want something where I can pattern-match constructors with different output types:
+
+```haskell
+I :: Int  -> Expr Int
+B :: Bool -> Expr Bool
+
+f :: Expr a -> a
+-- Or, rather:
+-- f :: (Expr Int -> Int) | (Expr Bool -> Bool)
+f e = match e (\i -> i) (\b -> b)
+```
+
+Hmm... A pattern-match gives you a function from the data type to the arguments of the constructor.
+
+Let's start with the easier data type: `Bool`.
+
+```haskell
+true :: ()  -> Bool
+false :: () -> Bool
+type Bool = a -> a -> a
+
+f :: Bool -> b -> b -> b
+f x tb fb = x tb fb
+```
+
+Aside: Here's the System F-omega version:
+
+```haskell
+typo Bool = forall X . X -> X -> X
+true = \X t: X . \f: X . t
+false = \X t: X . \f: X . f
+true [Nat] 0 1
+if = \X b: Bool . \tb: X . \fb: X . (b [X] tb fb)
+if [Nat] true 1 0
+if [Nat] false 1 0
+```
+
+Not clear yet. Let's try `Maybe`:
+
+```haskell
+just :: a  -> Maybe a
+nothing :: () -> Maybe a
+type Maybe a = (a -> b) -> b -> b
+
+f :: Maybe a -> (a -> b) -> b -> b
+f x jb nb = x jb nb
+
+-- Now we can see what `just` and `nothing` should be.
+just y jb nb = jb y
+nothing y jb nb = nb
+```
+
+Awesome. Got it. Now I know how to implement ADTs using basic lambdas. A constructor simply returns a function that gives its arguments to the right continuation. `just x` gives a function that gives x to the continuation for just (`jb`) whereas `nothing` gives a function that gives nothing to the continuation for nothing (`nb`).
+
+Now for the burning question. Can the two continuations have different return types?
+
+```haskell
+I :: Int  -> Expr Int
+B :: Bool -> Expr Bool
+type Expr a = (Int -> b) -> (Bool -> b) -> b
+
+f :: Expr a -> (Int -> b) -> (Bool -> b) -> b
+f x ib bb = x ib bb
+
+-- So, the definitions of `I` and `B` should be:
+I i ib bb = ib i
+B b ib bb = bb b
+```
+
+But here's the catch: both branches `ib :: Int -> b` and `bb :: Bool -> b` return the same type `b`. I want them to return different types: say, `ib' :: Int -> Int` and `bb' :: Bool -> Bool`.
+
+That means I need a deconstructing function like:
+
+```haskell
+I :: Int  -> Expr Int
+B :: Bool -> Expr Bool
+type Expr a = (Int -> b) -> (Bool -> c) -> (b | c)
+
+f :: Expr a -> (Int -> b) -> (Bool -> c) -> (b | c)
+f x ib bb = x ib bb
+
+-- So, the definitions of `I` and `B` should be:
+I i ib bb = ib i
+B b ib bb = bb b
+```
+
+The problem is that I don't know if you can represent a type like `b | c`. `Either b c` does exist, but it is checked dynamically. I want something where `f (I 7) (+1) (not)` typechecks to `Int`, not `Either Int Bool`. That is, when you write `(f (x :: Expr Int) (ib :: Int -> Int) (bb :: Bool -> Bool)) :: Int`, the typechecker should accept it.
+
+I notice that the type `a` is not used anywhere in the type of `f`. Can it be used to decide the return type?
+
+I need an example of a type choosing between two types. So far, we saw that a value (`just 3`) chose between two types (or rather between two functions).
+
+Wait. Isn't System F-omega just STLC on the type level? We know how to use a term to choose between two other terms (as we saw in the `Bool` and `Maybe` examples). We can lift that same idea to the type level.
+
+The original, term-level code:
+
+```haskell
+just :: a  -> Maybe a
+nothing :: () -> Maybe a
+type Maybe a = (a -> b) -> b -> b
+
+f :: Maybe a -> (a -> b) -> b -> b
+f x jb nb = x jb nb
+
+-- Now we can see what `just` and `nothing` should be.
+just y jb nb = jb y
+nothing y jb nb = nb
+```
+
+Now for the type-level code:
+
+```haskell
+TJust :: *  -> TMaybe *
+TNothing :: TMaybe *
+kind of TMaybe = (* -> *) -> * -> *
+
+TF :: TMaybe -> (* -> *) -> * -> *
+f x jb nb = x jb nb
+
+TJust A Jb Nb = Jb A
+TNothing A Jb Nb = Nb
+```
+
+(Maybe the asterisks should actually be some kind k.)
+
+Let's experiment with it. (Link: https://crypto.stanford.edu/~blynn/lambda/typo.html)
+
+It worked!
+
+```haskell
+typo Nat = forall X.(X->X)->X->X
+=> [forall X.(X -> X) -> X -> X : *]
+typo List = \X.forall R.(X->R->R)->R->R
+=> [\X.forall R.(X -> R -> R) -> R -> R : *->*]
+
+-- Fail. This should have been a kind, not a type operator ("typo").
+-- typo TMaybe = \A::(* -> *) -> * -> * . A -- fail
+-- => [\A::(*->*)->*->*.A : ((*->*)->*->*)->(*->*)->*->*]
+
+typo TJust = \A::*. \J::(* -> *) .\N:: *. J A
+=> [\A.\J::*->*.\N.J A : *->(*->*)->*->*]
+typo TNothing = \J::(* -> *). \N::*. N
+=> [\J::*->*.\N.N : (*->*)->*->*]
+
+typo TF = \J::(* -> *) .\N::*. \X:: (* -> *) -> * -> *. X J N
+typo TF = \X:: (* -> *) -> * -> *. \J::(* -> *) . \N::*. X J N
+=> [\X::(*->*)->*->*.\J::*->*.\N.X J N : ((*->*)->*->*)->(*->*)->*->*]
+
+typo Foo = TF List Bool (TJust Nat)
+=> [forall R.((forall X.(X -> X) -> X -> X) -> R -> R) -> R -> R : *]
+typo Bar = TF List Bool TNothing
+=> [forall X.(X -> X) -> X -> X : *]
+```
+
+The last part can be rewritten as:
+
+```haskell
+typo Foo = TF List Bool (TJust Nat)
+=> [forall R.((forall X.(X -> X) -> X -> X) -> R -> R) -> R -> R : *]
+=> [forall R.(Nat -> R -> R) -> R -> R : *]
+=> [List Nat : *]
+
+typo Bar = TF List Bool TNothing
+=> [forall X.X -> X -> X : *]
+=> [Bool : *]
+```
+
+In other words, when the third argument to `TF` was `TJust Nat`, it applied the first argument `List` to the inner `Nat` and returned `List Nat`. When the third argument to `TF` was `TNothing`, it just returned the second argument `Bool`.
+
+This is completely analogous to the Haskell function `maybe :: b -> (a -> b) -> Maybe a -> b`. When the `Maybe a` is `Just x` it applies the `a -> b` function to `x`. When the `Maybe a` is `Nothing`, it just returns the `b`.
+
+(I need a kind synonym to replace `(*->*)->*->*` with `TMaybe`.)
+
+**Hypothesis**: The union of two type operators A of kind `ka -> *` and B of kind `kb -> *` is simply the type with kind `kunion :: (ka -> *) -> (kb -> *) -> *`. The constructor for A has the kind `ka -> kunion` and the constructor for B has the kind `kb -> kunion`. The pattern-matching operator for the union has the kind `ka -> kb -> kunion -> *`.
+
+**Hypothesis**: The product of two type operators A of kind `ka -> *` and B of kind `kb -> *` is the type with kind `kproduct :: (ka -> kb -> *) -> *`. The constructor is of the kind `ka -> kb -> kproduct` and the pattern-matching operator of the kind `(ka -> kb -> *) -> kproduct -> *`.
+
+```haskell
+typo TProduct = \A::*. \B::*. \F::(* -> * -> *). F A B
+=> [\A.\B.\F::*->*->*.F A B : *->*->(*->*->*)->*]
+typo TDestructProduct = \F:: (* -> * -> *). \P::((* -> * -> *) -> *). P F
+=> [\F::*->*->*.\P::(*->*->*)->*.P F : (*->*->*)->((*->*->*)->*)->*]
+typo TFst = \A::*. \B::*. A
+=> [\A.\B.A : *->*->*]
+
+typo Pair = TProduct Nat Bool
+=> [\F::*->*->*.F(forallX.(X -> X) -> X -> X)(forallX.X -> X -> X) : (*->*->*)->*]
+typo Fst = TDestructProduct TFst Pair
+=> [forallX.(X -> X) -> X -> X : *]
+```
+
 ## Algebraic Data Types (ADTs)
 
 + I've already got product types in the form of records.
