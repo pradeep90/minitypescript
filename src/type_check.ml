@@ -43,11 +43,14 @@ let rec type_of ctx = function
 	if subtype ty2 ty3 then ty3
 	else if subtype ty3 ty2 then ty2
 	else type_error "incompatible types in conditional"
-  | Fun (f, x, ty1, ty2, e) ->
-     let ty1_concrete = make_alias_param (substitute_aliases_maybe ctx ty1) in
-     let ty2_concrete = make_alias_param (substitute_aliases_maybe ctx ty2) in
-      check ((f, TArrow(ty1_concrete,ty2_concrete)) :: (x, ty1_concrete) :: ctx) e ty2_concrete ;
-      TArrow (ty1_concrete, ty2_concrete)
+  | Fun (f, x, ty, e) ->
+     (match ty with
+      | TArrow (ty1, ty2) ->
+         let ty1_concrete = make_alias_param (substitute_aliases_maybe ctx ty1) in
+         let ty2_concrete = make_alias_param (substitute_aliases_maybe ctx ty2) in
+         check ((f, TArrow(ty1_concrete,ty2_concrete)) :: (x, ty1_concrete) :: ctx) e ty2_concrete ;
+         TArrow (ty1_concrete, ty2_concrete)
+      | _ -> type_error ("expected function type but got " ^ string_of_type ty))
   | Closure _ -> assert false
   | Let (x, e1, e2) -> type_of ((x, type_of ctx e1)::ctx) e2
   | App (e1, e2) ->

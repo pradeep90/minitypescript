@@ -69,7 +69,7 @@ let test_fixture = "eval" >:::
   );
 
   "fun" >:: (fun () ->
-    let closure = (eval [("yo", Int 7)] (Fun ("f", "x", TInt, TInt, Var "x")))
+    let closure = (eval [("yo", Int 7)] (Fun ("f", "x", TArrow (TInt, TInt), Var "x")))
     in
     match closure with
     | Closure (env, param, body) ->
@@ -92,12 +92,12 @@ let test_fixture = "eval" >:::
   );
 
   "app" >:: (fun () ->
-    assert_equal (Int 8) (eval [("yo", Int 7)] (App (Fun ("f", "x", TInt, TInt, Var "x"), Int 8)));
-    assert_equal (Int 15) (eval [("yo", Int 7)] (App (Fun ("f", "x", TInt, TInt, Plus (Var "x", Var "yo")), Int 8)));
+    assert_equal (Int 8) (eval [("yo", Int 7)] (App (Fun ("f", "x", TArrow (TInt, TInt), Var "x"), Int 8)));
+    assert_equal (Int 15) (eval [("yo", Int 7)] (App (Fun ("f", "x", TArrow (TInt, TInt), Plus (Var "x", Var "yo")), Int 8)));
   );
 
   "app_recursive" >:: (fun () ->
-    assert_equal (Int 120) (eval [] (App (Fun ("fact", "x", TInt, TInt, If (Equal (Var "x", Int 1), Int 1, Times (Var "x", App (Var "fact", Minus (Var "x", Int 1))))), Int 5)));
+    assert_equal (Int 120) (eval [] (App (Fun ("fact", "x", TArrow (TInt, TInt), If (Equal (Var "x", Int 1), Int 1, Times (Var "x", App (Var "fact", Minus (Var "x", Int 1))))), Int 5)));
   );
 
   "record" >:: (fun () ->

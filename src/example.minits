@@ -2,13 +2,13 @@ let u = { re = 1, im = 0 }
 ;;
 
 let conjugate =
-  fun f(z : {re:int, im:int}):{re:int, im:int} is
+  fun f(z): {re:int, im:int} -> {re:int, im:int} is
     {re = z.re, im = 0 - z.im}
 ;;
 
 let plus =
-  fun f(z : {re:int, im:int}) : {re:int, im:int} -> {re:int, im:int} is
-  fun g(w : {re:int, im:int}) : {re:int, im:int} is
+  fun f(z) : {re:int, im:int} -> {re:int, im:int} -> {re:int, im:int} is
+  fun g(w) : {re:int, im:int} -> {re:int, im:int} is
     { re = z.re + w.re, im = z.im + w.im }
 ;;
 
@@ -23,10 +23,10 @@ type Foo = int
 type BarRecord = {a: Foo, b: {c: Foo, d: bool}}
 ;;
 
-let increment = fun f(x: Foo): Foo is x + 1
+let increment = fun f(x): Foo -> Foo is x + 1
 ;;
 
-let create_bar_record = fun g(x: bool): BarRecord is {a = 1, b = {c = 2, d = x}}
+let create_bar_record = fun g(x): bool -> BarRecord is {a = 1, b = {c = 2, d = x}}
 
 ;;
 
@@ -38,7 +38,7 @@ create_bar_record true
 
 ;;
 
-let id = fun f(x: A): A is x
+let id = fun f(x): A -> A is x
 ;;
 
 id 3;;
@@ -46,16 +46,22 @@ id true;;
 id {a = 1};;
 id id;;
 
-let const = fun f(x: A): B -> A is fun g(y: B): A is x
+let const = fun f(x): A -> B -> A is fun g(y): B -> A is x
 ;;
 const 1 2;;
 const true 3;;
 const 7 id;;
 
-let compose = fun f1(f: B -> C): (A -> B) -> (A -> C) is
-    fun f2(g: A -> B): A -> C is
-    	fun f3(x: A): C is
+let compose = fun f1(f): (B -> C) -> (A -> B) -> (A -> C) is
+    fun f2(g): (A -> B) -> A -> C is
+    	fun f3(x): A -> C is
 	    f (g x)
 ;;
 
 compose increment increment 3
+
+;;
+
+let fxx = fun f1(x): (A -> A) -> A -> A is x x
+;;
+fxx id

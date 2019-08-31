@@ -30,7 +30,7 @@ type expr =
   | Or of expr * expr (** disjunction [e1 or e2] *)
   | Not of expr (** negation [not e] *)
   | If of expr * expr * expr (** conditional [if e1 then e2 else e3] *)
-  | Fun of name * name * ty * ty * expr (** recursive function [fun f(x : ty1):ty2 is e] *)
+  | Fun of name * name * ty * expr (** recursive function [fun f(x : ty1):ty2 is e] *)
   | Closure of environment * name * expr (** closure (internal value) *)
   | Let of name * expr * expr (** local definition [let x = e1 in e2] *)
   | App of expr * expr (** application [e1 e2] *)

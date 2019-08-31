@@ -65,20 +65,20 @@ let test_fixture = "type_check" >:::
   );
 
   "fun" >:: ( fun () ->
-    assert_equal (TArrow (TInt, TInt)) (type_of [] (Fun ("f", "x", TInt, TInt, Var "x")));
-    assert_type_error (fun _ -> type_of [] (Fun ("f", "x", TInt, TBool, Var "x"))) "incompatible types; int is not a subtype of bool";
-    assert_equal (TArrow (TInt, TInt)) (type_of [] (Fun ("f", "x", TInt, TInt, App (Var "f", Var "x"))));
-    assert_type_error (fun _ -> type_of [] (Fun ("f", "x", TInt, TInt, App (Var "f", Bool true)))) "incompatible types; bool is not a subtype of int";
+    assert_equal (TArrow (TInt, TInt)) (type_of [] (Fun ("f", "x", TArrow (TInt, TInt), Var "x")));
+    assert_type_error (fun _ -> type_of [] (Fun ("f", "x", TArrow (TInt, TBool), Var "x"))) "incompatible types; int is not a subtype of bool";
+    assert_equal (TArrow (TInt, TInt)) (type_of [] (Fun ("f", "x", TArrow (TInt, TInt), App (Var "f", Var "x"))));
+    assert_type_error (fun _ -> type_of [] (Fun ("f", "x", TArrow (TInt, TInt), App (Var "f", Bool true)))) "incompatible types; bool is not a subtype of int";
             );
 
   "fun_aliases" >:: ( fun () ->
-    assert_equal (TArrow (TInt, TInt)) (type_of [("Foo", TInt)] (Fun ("f", "x", TAlias "Foo", TAlias "Foo", App (Var "f", Var "x"))));
+    assert_equal (TArrow (TInt, TInt)) (type_of [("Foo", TInt)] (Fun ("f", "x", TArrow (TAlias "Foo", TAlias "Foo"), App (Var "f", Var "x"))));
             );
 
   "fun_type_params" >:: ( fun () ->
-    assert_equal (TArrow (TParam "Foo", TParam "Foo")) (type_of [] (Fun ("f", "x", TAlias "Foo", TAlias "Foo", Var "x")));
-    assert_type_error (fun _ -> type_of [] (Fun ("f", "x", TAlias "Foo", TAlias "Foo", Int 3))) "incompatible types; int is not a subtype of Foo";
-    assert_type_error (fun _ -> type_of [] (Fun ("f", "x", TAlias "Foo", TAlias "Bar", Var "x"))) "incompatible types; Foo is not a subtype of Bar";
+    assert_equal (TArrow (TParam "Foo", TParam "Foo")) (type_of [] (Fun ("f", "x", TArrow (TAlias "Foo", TAlias "Foo"), Var "x")));
+    assert_type_error (fun _ -> type_of [] (Fun ("f", "x", TArrow (TAlias "Foo", TAlias "Foo"), Int 3))) "incompatible types; int is not a subtype of Foo";
+    assert_type_error (fun _ -> type_of [] (Fun ("f", "x", TArrow (TAlias "Foo", TAlias "Bar"), Var "x"))) "incompatible types; Foo is not a subtype of Bar";
             );
 
   "let" >:: ( fun () ->
@@ -86,27 +86,27 @@ let test_fixture = "type_check" >:::
   );
 
   "app" >:: ( fun () ->
-    assert_equal TInt (type_of [] (App (Fun ("f", "x", TInt, TInt, Var "x"), Int 8)));
-    assert_type_error (fun _ -> type_of [] (App (Fun ("f", "x", TInt, TInt, Var "x"), Bool true))) "incompatible types; bool is not a subtype of int";
+    assert_equal TInt (type_of [] (App (Fun ("f", "x", TArrow (TInt, TInt), Var "x"), Int 8)));
+    assert_type_error (fun _ -> type_of [] (App (Fun ("f", "x", TArrow (TInt, TInt), Var "x"), Bool true))) "incompatible types; bool is not a subtype of int";
     assert_type_error (fun _ -> type_of [] (App (Int 7, Bool true))) "function expected";
   );
 
   "app_parameterized_function" >:: ( fun () ->
-    assert_equal TBool (type_of [] (App (Fun ("id", "x", TParam "Foo", TParam "Foo", Var "x"), Bool true)));
-    assert_equal (TArrow (TParam "Foo", TParam "Foo")) (type_of [] (App (Fun ("id", "x", TParam "Foo", TParam "Foo", Var "x"), Fun ("id", "x", TParam "Foo", TParam "Foo", Var "x"))));
-    assert_equal TInt (type_of [] (App (App (Fun ("const", "x", TParam "Foo", TArrow (TParam "Bar", TParam "Foo"), Fun ("f", "y", TParam "Bar", TParam "Foo", Var "x")), Int 1), Bool true)));
+    assert_equal TBool (type_of [] (App (Fun ("id", "x", TArrow (TParam "Foo", TParam "Foo"), Var "x"), Bool true)));
+    assert_equal (TArrow (TParam "Foo", TParam "Foo")) (type_of [] (App (Fun ("id", "x", TArrow (TParam "Foo", TParam "Foo"), Var "x"), Fun ("id", "x", TArrow (TParam "Foo", TParam "Foo"), Var "x"))));
+    assert_equal TInt (type_of [] (App (App (Fun ("const", "x", TArrow (TParam "Foo", TArrow (TParam "Bar", TParam "Foo")), Fun ("f", "y", TArrow (TParam "Bar", TParam "Foo"), Var "x")), Int 1), Bool true)));
 
-    assert_equal (TRecord [("a", TInt); ("b", TInt)]) (type_of [] (App (Fun ("f", "x", TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], Var "x"), Record [("a", Int 1); ("b", Int 2)])));
+    assert_equal (TRecord [("a", TInt); ("b", TInt)]) (type_of [] (App (Fun ("f", "x", TArrow (TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")]), Var "x"), Record [("a", Int 1); ("b", Int 2)])));
 
-    assert_type_error (fun _ -> type_of [] (App (Fun ("f", "x", TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], Var "x"), Record [("a", Int 1); ("b", Bool true)]))) "cannot unify the constraints that type parameter Foo : bool and Foo : int";
+    assert_type_error (fun _ -> type_of [] (App (Fun ("f", "x", TArrow (TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")]), Var "x"), Record [("a", Int 1); ("b", Bool true)]))) "cannot unify the constraints that type parameter Foo : bool and Foo : int";
 
     (* One of these two tests will fail if the type picked for Foo is not the
        most general type. *)
-    assert_equal (TRecord [("a", TRecord [("c", TInt)]); ("b", TRecord [("c", TInt)])]) (type_of [] (App (Fun ("f", "x", TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], Var "x"), Record [("a", Record [("c", Int 1)]); ("b", Record [("c", Int 1); ("d", Bool true)])])));
-    assert_equal (TRecord [("a", TRecord [("c", TInt)]); ("b", TRecord [("c", TInt)])]) (type_of [] (App (Fun ("f", "x", TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], Var "x"), Record [("a", Record [("c", Int 1); ("d", Bool true)]); ("b", Record [("c", Int 1)])])));
+    assert_equal (TRecord [("a", TRecord [("c", TInt)]); ("b", TRecord [("c", TInt)])]) (type_of [] (App (Fun ("f", "x", TArrow (TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")]), Var "x"), Record [("a", Record [("c", Int 1)]); ("b", Record [("c", Int 1); ("d", Bool true)])])));
+    assert_equal (TRecord [("a", TRecord [("c", TInt)]); ("b", TRecord [("c", TInt)])]) (type_of [] (App (Fun ("f", "x", TArrow (TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")]), Var "x"), Record [("a", Record [("c", Int 1); ("d", Bool true)]); ("b", Record [("c", Int 1)])])));
 
-    assert_equal TInt (type_of [] (App (Fun ("dummy", "f", TArrow (TParam "A", TParam "B"), TInt, Int 3), Fun ("increment", "x", TInt, TInt, Plus (Var "x", Int 1)))));
-    assert_equal (TArrow (TInt, TInt)) (type_of [] (App (Fun ("dummy", "f", TArrow (TParam "A", TParam "B"), TArrow (TParam "A", TParam "B"), Var "f"), Fun ("increment", "x", TInt, TInt, Plus (Var "x", Int 1)))));
+    assert_equal TInt (type_of [] (App (Fun ("dummy", "f", TArrow (TArrow (TParam "A", TParam "B"), TInt), Int 3), Fun ("increment", "x", TArrow (TInt, TInt), Plus (Var "x", Int 1)))));
+    assert_equal (TArrow (TInt, TInt)) (type_of [] (App (Fun ("dummy", "f", TArrow (TArrow (TParam "A", TParam "B"), TArrow (TParam "A", TParam "B")), Var "f"), Fun ("increment", "x", TArrow (TInt, TInt), Plus (Var "x", Int 1)))));
   );
 
   "record" >:: ( fun () ->

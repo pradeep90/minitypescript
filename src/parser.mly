@@ -72,7 +72,7 @@ expr:
   | boolean             { $1 }
   | LET VAR EQUAL expr IN expr { Let ($2, $4, $6) }
   | IF expr THEN expr ELSE expr	       { If ($2, $4, $6) }
-  | FUN VAR LPAREN VAR COLON ty RPAREN COLON ty IS expr { Fun ($2, $4, $6, $9, $11) }
+  | FUN VAR LPAREN VAR RPAREN COLON ty IS expr { Fun ($2, $4, $7, $9) }
 
 typedecl:
   | TYPEDECL VAR EQUAL ty   { TypeDecl ($2, $4) }

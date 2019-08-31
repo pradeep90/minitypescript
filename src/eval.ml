@@ -58,7 +58,7 @@ let rec eval env = function
 	   Bool true -> eval env e2
 	 | Bool false -> eval env e3
 	 | _ -> runtime_error "boolean value expected in conditional")
-  | Fun (f, x, _, _, e) ->
+  | Fun (f, x, _, e) ->
       let rec c = Closure ((f,c)::env, x, e) in c
   | Closure _ as e -> e
   | Let (x, e1, e2) -> eval ((x, eval env e1)::env) e2
@@ -72,4 +72,3 @@ let rec eval env = function
       (match eval env e with
 	   Record vs -> eval env (snd (List.find (fun (l',_) -> l = l') vs))
 	 | _ -> runtime_error "record expected")
-
