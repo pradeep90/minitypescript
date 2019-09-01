@@ -266,6 +266,10 @@ Awesome. Got it. Now I know how to implement ADTs using basic lambdas.
 
 **Hypothesis**: A constructor simply returns a function that gives its arguments to the right continuation. `just x` gives a function that gives x to the continuation for just (`jb`) whereas `nothing` gives a function that gives nothing to the continuation for nothing (`nb`). An ADT is just a function with a continuation for each variant.
 
+## My Failed Attempts
+
+### Other Open Questions that I was Struggling With
+
 Now for the burning question. Can the two continuations have different return types?
 
 ```haskell
@@ -302,7 +306,7 @@ The problem is that I don't know if you can represent a type like `b | c`. `Eith
 
 I notice that the type `a` is not used anywhere in the type of `f`. Can it be used to decide the return type?
 
-## Choose a Type based on Another Type
+### Choose a Type based on Another Type
 
 I need an example of a type choosing between two types. So far, we saw that a value (`just 3`) chose between two types (or rather between two functions).
 
@@ -399,9 +403,258 @@ typo TFst = \A::*. \B::*. A
 => [\A.\B.A : *->*->*]
 
 typo Pair = TProduct Nat Bool
+
 => [\F::*->*->*.F(forallX.(X -> X) -> X -> X)(forallX.X -> X -> X) : (*->*->*)->*]
 typo Fst = TDestructProduct TFst Pair
 => [forallX.(X -> X) -> X -> X : *]
+```
+
+### Type-level Attempts
+
+I need a type-lambda that will produce the type `b` if the input is `Int` and `c` if the input is `Bool`. Is that possible? Do you have the necessary equality constraints on types?
+
+Let's translate that type-level problem to a term-level problem in STLC. I want the output to be 3 if the input is 0 and 4 if the input is 1. How do you test whether the input is equal to 3? Well, you can implement an equality test for Church numerals.
+
+Here's how far I got with `eval`:
+
+```haskell
+typo ExprNat = \N::*. \B::*. N
+typo ExprBool = \N::*. \B::*. B
+typo Expr = \X::(* -> * -> *). \FN::*. \FB::*. X FN FB
+typo Foo = Expr ExprNat Nat Bool
+=> [forall X.(X -> X) -> X -> X : *] (i.e., Nat)
+
+-- Not sure how to pattern-match on the type of x in the body.
+eval = \X::(* -> * -> *). \x: Expr X Nat Bool. 0
+eval [ExprNat] 1
+```
+
+Hmm... Maybe I should **pass in** a function that gives some value of type X.
+
+Stopped at:
+
+```haskell
+eval = \X::(* -> * -> *). \x: Expr X Nat Bool. \f: Expr X (Nat -> Nat) (Bool -> Bool). f x
+=> type error: App: Expr X(Nat -> Nat)(Bool -> Bool) to Expr X Nat Bool
+
+eval = \X::(* -> * -> *). \x: Expr X Nat Bool. \f: Expr X (Nat -> Nat) (Bool -> Bool). f [X] x
+=> type error: TApp X(Nat -> Nat)(Bool -> Bool)
+
+typo test = Expr ExprNat (Nat -> Nat) Bool
+=> [(forall X.(X -> X) -> X -> X) -> (forall X.(X -> X) -> X -> X) : *]
+
+evalNat = \x: Expr ExprNat Nat Bool. \f: Expr ExprNat (Nat -> Nat) (Bool -> Bool). f x
+=> [evalNat:Expr ExprNat Nat Bool -> Expr ExprNat(Nat -> Nat)(Bool -> Bool) -> Nat]
+
+evalNat 0 succ
+=> \s z.s z (i.e., 1)
+
+Current session:
+
+typo Bool = forall X . X -> X -> X
+true = \X t: X . \f: X . t
+false = \X t: X . \f: X . f
+true [Nat] 0 1
+if = \X b: Bool . \tb: X . \fb: X . (b [X] tb fb)
+if [Nat] true 1 0
+if [Nat] false 1 0
+typo ExprNat = \N::*. \B::*. N
+typo ExprBool = \N::*. \B::*. B
+typo Expr = \X::(* -> * -> *). \FN::*. \FB::*. X FN FB
+eval = \X::(* -> * -> *). \x: Expr X Nat Bool. \f: Expr X (Nat -> Nat) (Bool -> Bool). (f [X]) x
+typo test = Expr ExprNat (Nat -> Nat) Bool
+evalNat = \x: Expr ExprNat Nat Bool. \f: Expr ExprNat (Nat -> Nat) (Bool -> Bool). f x
+evalNat 0 succ
+eval = \X::(* -> * -> *). \x: Expr X Nat Bool. \f: Expr X (Nat -> Nat) (Bool -> Bool). f [X (Nat -> Nat) (Bool -> Bool)] x
+```
+
+I don't even know if you can choose the function to be executed based on a type. We want `foo [Int] 3 :: Int` and `foo [Bool] true :: Bool`.
+
+```haskell
+foo :: (Int | Bool) -> (Int | Bool)
+-- Or maybe
+foo :: (Int -> Int) | (Bool -> Bool)
+```
+
+How would you instantiate such a type? Don't know.
+
+Here are sum types.
+
+```haskell
+typo TSum = \FA::*. \FB::*. \X::(* -> * -> *). X FA FB
+typo test = TSum Nat Bool
+typo First = \FA::*. \FB::*. FA
+typo Second = \FA::*. \FB::*. FB
+typo test = TSum Nat Bool First
+```
+
+I want `foo :: TSum (Nat -> Nat) (Bool -> Bool)`. But that's not possible, because it has kind `* -> *` whereas a function type has to be of kind `*`. What if you do `foo :: \X::* -> * -> *. TSum (Nat -> Nat) (Bool -> Bool) X`?
+
+I think that on top of the type being right, the constructor has to be such that it picks out the correct branch of the function.
+
+Got an extremely verbose GADT working:
+
+```haskell
+sumConstructors = \A. \OA. \B. \OB. \fa: A -> OA. \fb: B -> OB. \X::*->*->*. \x: (A -> OA) -> (B -> OB) -> TSum (A -> OA) (B -> OB) X. x fa fb
+
+addTwoOrNegate = sumConstructors [Nat] [Nat] [Bool] [Bool] addTwo negate
+addTwoOrNegateFirst = (\fa:Nat->Nat. \fb:Bool->Bool. fa)
+addTwoOrNegateSecond = (\fa:Nat->Nat. \fb:Bool->Bool. fb)
+
+addTwoOrNegate [First] addTwoOrNegateFirst 0
+addTwoOrNegate [Second] addTwoOrNegateSecond true
+```
+
+Actually, the definition of `addTwoOrNegate` is not all that bad. It's basically what you would have to define in a conditional-type function definition. For example, `function process<T extends string | null>(text: T): T extends string ? string : null {}`.
+
+The two constructors are:
+
+```haskell
+[addTwoOrNegateFirst:(Nat -> Nat) -> (Bool -> Bool) -> Nat -> Nat]
+[addTwoOrNegateSecond:(Nat -> Nat) -> (Bool -> Bool) -> Bool -> Bool]
+```
+
+The type of `addTwoOrNegate` is basically:
+
+```haskell
+[addTwoOrNegate:forall X::*->*->*.((Nat -> Nat) -> (Bool -> Bool) -> TSum(Nat -> Nat)(Bool -> Bool) X) -> TSum(Nat -> Nat)(Bool -> Bool) X]
+
+-- In other words:
+[addTwoOrNegate: (TAddTwoOrNegate (Nat -> Nat | Bool -> Bool)) -> (Nat -> Nat | Bool -> Bool)]
+
+-- Or (very roughly):
+[addTwoOrNegate: Expr t -> t]
+```
+
+So, what the caller needs to know is its position type in the GADT (`First`) and its destructor function in the GADT (`\fa:Nat->Nat. \fb:Bool->Bool. fa`). Note that using the polymorphic `first :: forall a . a -> a -> a` didn't work as the destructor function. It had to be specific. That sucks. I guess you have to create such a destructor for every single sum-function you create. I guess you could add some syntactic sugar to define that destructor along with the function itself.
+
+Let's try with a union of base types instead of a union of function types like above.
+
+Question: How will you have multiple variants? You need union to be closed. That is, the type of `A | B` must be the same as the type of `A` or the type of `A | B | C`.
+
+You need two things from a union: the type destructor to get back the original type (so that you can return a specific type like `Int` instead of `Int | Bool`) and the term destructor to get back the original value.
+
+Can we somehow get that destructor using the type operator `First`? I want a type-indexed term. That's what a GADT is.
+
+### Constructors with Different Return Types
+
+We've seen that an ADT is just a function with a continuation for each variant. A constructor just returns a function that takes an ADT and sends in the constructor's arguments to the corresponding continuation.
+
+This formula worked for ADTs, where the return type was the same for all variants. For example, the ADT function for Maybe had the type `(a -> b) -> b -> b`, where the `a -> b` continuation was for `Just a` and `b` "continuation" was for Nothing, but they both had the same return type `b`.
+
+Let's test our understanding by trying to implement `eval` for the GADT `Expr a`:
+
+```haskell
+-- Smart constructors.
+I :: Int  -> Expr Int
+B :: Bool -> Expr Bool
+
+-- GADT.
+type Expr a = (Int -> b) -> (Bool -> b) -> b
+
+-- Constructors.
+I i fi fb = fi i
+B b fi fb = fb b
+
+evalInt i = i
+evalBool b = b
+-- This is where we hit a snag. (Actually, when I tried it below, I didn't hit a snag.)
+eval e = e evalInt evalBool
+```
+
+What happened when I actually tried it?
+
+```haskell
+makeI i fi fb = fi i
+makeB b fi fb = fb b
+
+evalInt i = i
+evalBool b = b
+eval e = e evalInt evalBool
+```
+
+```haskell
+Prelude> :t eval
+eval :: ((p1 -> p1) -> (p2 -> p2) -> t) -> t
+Prelude> eval (makeI 3)
+3
+Prelude> eval (makeB True)
+True
+Prelude> :t eval
+eval :: ((p1 -> p1) -> (p2 -> p2) -> t) -> t
+```
+
+It seems to work. Something must be wrong. Maybe it's the fact that I haven't used a recursive call anywhere.
+
+Let's try to implement the original motivating problem for GADTs.
+
+```haskell
+makeI :: Int  -> Expr Int
+makeB :: Bool -> Expr Bool
+makeAdd :: Expr Int -> Expr Int -> Expr Int
+
+eval :: Expr t -> t
+eval (I v) = v
+eval (B v) = v
+eval (Add x y) = (eval x) + (eval y)
+
+-- Test cases that should fail.
+-- add3 (i3 10) (b3 True)
+
+-- Test cases that should pass
+-- (makeI 12) :: Expr3 Int (Not sure what this means in the above system.)
+-- (eval (makeAdd (makeI 3) (makeI 4))) :: Int (not something else)
+```
+
+```haskell
+Prelude> :t makeAdd [1, 2] "yo"
+makeAdd [1, 2] "yo"
+  :: Num a => p1 -> p2 -> ([a] -> [Char] -> t3) -> t3
+
+-- This is obviously bad.
+
+Prelude> :t makeI 10
+makeI 10 :: Num t1 => (t1 -> t2) -> p1 -> p2 -> t2
+
+Prelude> :t makeAdd (makeI 3) (makeI 4)
+makeAdd (makeI 3) (makeI 4)
+  :: (Num t4, Num t5) =>
+     p4
+     -> p5
+     -> (((t4 -> t6) -> p6 -> p7 -> t6)
+         -> ((t5 -> t7) -> p8 -> p9 -> t7) -> t3)
+     -> t3
+
+-- Utter fail!
+```
+
+Note that I'm not even able to express the recursive type `Expr a`
+
+```haskell
+Prelude> type Expr a = (Int -> a) -> (Bool -> a) -> (Expr Int -> Expr Int -> a) -> a
+
+<interactive>:49:1: error:
+    Cycle in type synonym declarations:
+      <interactive>:49:1-75: type Expr a =
+                                 (Int -> a) -> (Bool -> a) -> (Expr Int -> Expr Int -> a) -> a
+```
+
+Current session:
+
+```haskell
+typo Expr = \A. forall R::*. (Nat -> A) -> (Bool -> A) -> (R -> R -> A) -> A
+typo test = Expr Nat
+makeI = \A. \x:Nat. \R. \fi: Nat->A. \fb: Bool -> A. \fa: R -> R -> A. fi x
+makeB = \A. \x:Bool.\fi: Nat->A. \fb: Bool -> A. \fa: Expr Nat -> Expr Nat -> A. fb x
+typo test = forall A . Expr Nat -> A
+foo = \x: Expr Nat. x [Expr Nat] succ (\b: Bool. 0) (\e1: Expr Nat. \e2: Expr Nat. 1)
+\e1: Expr Nat. \e2: Expr Nat. 1
+foo (makeI [Nat] 1)
+makeAdd = \A. \R. \a: R. \b: R.\fi: Nat->A. \fb: Bool -> A. \fa: R -> R -> A. fa a b
+
+evalI = \i: Nat. i
+evalB = \b: Bool. b
+evalAdd = \R. \e1 e2: R. 1
 ```
 
 ## Algebraic Data Types (ADTs)
