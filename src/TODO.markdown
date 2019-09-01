@@ -266,6 +266,23 @@ Awesome. Got it. Now I know how to implement ADTs using basic lambdas.
 
 **Hypothesis**: A constructor simply returns a function that gives its arguments to the right continuation. `just x` gives a function that gives x to the continuation for just (`jb`) whereas `nothing` gives a function that gives nothing to the continuation for nothing (`nb`). An ADT is just a function with a continuation for each variant.
 
+Will this work for recursively defined ADTs like List? Yes. (Example from https://crypto.stanford.edu/~blynn/lambda/typo.html)
+
+```haskell
+typo Nat = forall X.(X->X)->X->X
+typo List = \X.forall R::*.(X->R->R)->R->R
+0=\X s:X->X . \z:X.z
+succ=\n:Nat.\X s:X->X.\z:X.s(n[X] s z)
+cons = \X.\h:X.\t:List X.(\R.\c:X->R->R.\n:R.c h(t [R] c n))
+nil  = \X.(\R.\c:X->R->R.\n:R.n)
+1 = succ 0
+let c = cons[Nat] in c 0(c (succ 1)(c 1 (nil[Nat])))
+```
+
+Basically, an ADT can be represented as an F-algebra (such as `(1 + Int x a) -> a` for `List Int`). A function that pattern-matches over an ADT is another F-algebra (such as `(1 + Int x Int) -> Int` for `sum`).
+
+The trouble with GADTs is that they don't fit the pattern of an F-algebra like `F A -> A`. It's more like one output type for each variant, such as `(Int -> Expr Int) | (Bool -> Expr Bool)`. Maybe that falls under the category of `F A -> (G F) A`, where the shape of the return type depends on the shape of the input type. (Not sure what is the formal term for this.)
+
 ## My Failed Attempts
 
 ### Other Open Questions that I was Struggling With
