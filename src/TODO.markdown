@@ -283,6 +283,73 @@ Basically, an ADT can be represented as an F-algebra (such as `(1 + Int x a) -> 
 
 The trouble with GADTs is that they don't fit the pattern of an F-algebra like `F A -> A`. It's more like one output type for each variant, such as `(Int -> Expr Int) | (Bool -> Expr Bool)`. Maybe that falls under the category of `F A -> (G F) A`, where the shape of the return type depends on the shape of the input type. (Not sure what is the formal term for this.)
 
+## How to make GADT constructors have the same return type: The Yoneda Lemma
+
+These are my notes on Gabriel Gonzales's post on [implementing GADTs](http://www.haskellforall.com/2012/06/gadts.html).
+
+> Fortunately, the Yoneda lemma from category theory provides the necessary trick to convert a GADT to an ordinary data type. The Yoneda lemma translated into Haskell is actually more understandable than the equivalent category theory explanation (at least, to me). It simply says that if f is a functor, then the following two types are isomorphic:
+>
+> `(forall b. (a -> b) -> f b) ~ f a`
+>
+> ... which means that we can define two functions `fw` and `bw` that can convert back and forth between those two types:
+>
+> ```haskell
+> fw :: (Functor f) => (forall b . (a -> b) -> f b) -> f a
+> fw f = f id
+>
+> bw :: (Functor f) => f a -> (forall b . (a -> b) -> f b)
+> bw x f = fmap f x
+> ```
+
+I'm guessing that `fw` corresponds to a constructor and `bw` corresponds to a deconstructor.
+
+Gabriel applies the Yoneda isomorphism to the `List a n` GADT.
+
+Here's my trial of his code:
+
+```haskell
+Prelude> :{
+Prelude| fw :: (Functor f) => (forall b . (a -> b) -> f b) -> f a
+Prelude| fw f = f id
+Prelude| :}
+Prelude> :{
+Prelude| bw :: (Functor f) => f a -> (forall b . (a -> b) -> f b)
+Prelude| bw x f = fmap f x
+Prelude| :}
+Prelude> :t bw
+bw :: Functor f => f a -> (a -> b) -> f b
+Prelude> :set -XExistentialQuantification
+Prelude> data List a n = Nil (Z -> n) | forall m. Cons a (List a m) (S m -> n)
+Prelude> :t fw Nil
+fw Nil :: Functor (List a) => List a Z
+Prelude> :{
+Prelude| instance Functor (List a) where
+Prelude|     fmap f (Nil g) = Nil (f . g)
+Prelude|     fmap f (Cons x xs g) = Cons x xs (f . g)
+Prelude| :}
+Prelude> :t fw Nil
+fw Nil :: List a Z
+Prelude> :t fw (Cons 1 (fw Nil))
+fw (Cons 1 (fw Nil)) :: Num a => List a (S Z)
+Prelude> :{
+Prelude| head' :: List a (S n) -> a
+Prelude| head' (Cons x xs f) = x
+Prelude| :}
+Prelude> head' (Nil id)
+
+<interactive>:117:8: error:
+    + Couldn't match type 'Z' with 'S n0'
+      Expected type: List a (S n0)
+        Actual type: List a Z
+    + In the first argument of 'head'', namely '(Nil id)'
+      In the expression: head' (Nil id)
+      In an equation for 'it': it = head' (Nil id)
+Prelude> head' (fw (Cons 1 (fw Nil)))
+1
+```
+
+It worked! This solves the problem I'd been struggling with for the past few days: how to encode GADTs so that every constructor has the same return type?
+
 ## My Failed Attempts
 
 ### Other Open Questions that I was Struggling With
