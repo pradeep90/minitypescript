@@ -208,6 +208,8 @@ Maybe have a separate pure implementation of System F-omega so that you can look
 
 Check in the online interpreter (https://crypto.stanford.edu/~blynn/lambda/typo.html) if you can encode something like a GADT in System F-omega.
 
+## Implementing an ADT using Lambdas
+
 I want something where I can pattern-match constructors with different output types:
 
 ```haskell
@@ -260,7 +262,9 @@ just y jb nb = jb y
 nothing y jb nb = nb
 ```
 
-Awesome. Got it. Now I know how to implement ADTs using basic lambdas. A constructor simply returns a function that gives its arguments to the right continuation. `just x` gives a function that gives x to the continuation for just (`jb`) whereas `nothing` gives a function that gives nothing to the continuation for nothing (`nb`).
+Awesome. Got it. Now I know how to implement ADTs using basic lambdas.
+
+**Hypothesis**: A constructor simply returns a function that gives its arguments to the right continuation. `just x` gives a function that gives x to the continuation for just (`jb`) whereas `nothing` gives a function that gives nothing to the continuation for nothing (`nb`). An ADT is just a function with a continuation for each variant.
 
 Now for the burning question. Can the two continuations have different return types?
 
@@ -297,6 +301,8 @@ B b ib bb = bb b
 The problem is that I don't know if you can represent a type like `b | c`. `Either b c` does exist, but it is checked dynamically. I want something where `f (I 7) (+1) (not)` typechecks to `Int`, not `Either Int Bool`. That is, when you write `(f (x :: Expr Int) (ib :: Int -> Int) (bb :: Bool -> Bool)) :: Int`, the typechecker should accept it.
 
 I notice that the type `a` is not used anywhere in the type of `f`. Can it be used to decide the return type?
+
+## Choose a Type based on Another Type
 
 I need an example of a type choosing between two types. So far, we saw that a value (`just 3`) chose between two types (or rather between two functions).
 
@@ -353,8 +359,7 @@ typo TNothing = \J::(* -> *). \N::*. N
 => [\J::*->*.\N.N : (*->*)->*->*]
 
 typo TF = \J::(* -> *) .\N::*. \X:: (* -> *) -> * -> *. X J N
-typo TF = \X:: (* -> *) -> * -> *. \J::(* -> *) . \N::*. X J N
-=> [\X::(*->*)->*->*.\J::*->*.\N.X J N : ((*->*)->*->*)->(*->*)->*->*]
+=> [\J::*->*.\N.\X::(*->*)->*->*.X J N : ((*->*)->*->*)->(*->*)->*->*]
 
 typo Foo = TF List Bool (TJust Nat)
 => [forall R.((forall X.(X -> X) -> X -> X) -> R -> R) -> R -> R : *]
