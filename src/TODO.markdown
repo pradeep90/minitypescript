@@ -350,6 +350,71 @@ Prelude> head' (fw (Cons 1 (fw Nil)))
 
 It worked! This solves the problem I'd been struggling with for the past few days: how to encode GADTs so that every constructor has the same return type?
 
+## Last Try
+
+I want to implement in System F-omega the following GADT:
+
+```haskell
+data Expr t where
+	I :: Int -> Expr Int
+	B :: Bool -> Expr Bool
+	Add :: Expr Int -> Expr Int -> Expr Int
+```
+
+Now, `Expr a` is a functor, so the Yoneda lemma says that `Expr a ~ (forall b . (a -> b) -> Expr b)`.
+
+That means that our constructors become:
+
+```haskell
+I :: forall b . Int -> (Int -> b) -> Expr b
+B :: forall b . Bool -> (Bool -> b) -> Expr b
+Add :: forall b . Expr Int -> Expr Int -> (Int -> b) -> Expr b
+```
+
+The trick lies in constructing the return type R. I was able to write `Expr`, `I`, and `B` easily enough. I failed when I tried to write `Add` with its recursive dependence on `Expr`. Let's look at how they did it for `List X`.
+
+```haskell
+typo List = \X.forall R.(X->R->R)->R->R
+0=\X s:X->X . \z:X.z
+succ=\n:Nat.\X s:X->X.\z:X.s(n[X] s z)
+cons = \X.\h:X.\t:List X.(\R.\c:X->R->R.\n:R.c h(t [R] c n))
+nil  = \X.(\R.\c:X->R->R.\n:R.n)
+```
+
+Note that the code within parens in `cons` isn't `(\R.\c:X->R->R.\n:R.c h t)`. It's `(\R.\c:X->R->R.\n:R.c h(t [R] c n))`. In other words, `t: List X` is not of type `R`. You have to get to the inner type `R` within the definition of `List` (`\X.forall R.(X->R->R)->R->R`) by adding all the arguments. So, `t [R] c n` sets the type parameter `R` to `R`, the value parameter `(X->R->R)` to `c`, and the value parameter `R` to `n`. Now, `t [R] c n` is of type `R`.
+
+Got stuck when trying to use an `Expr Nat`:
+
+```haskell
+typo Expr = \B. forall R::*->*. (Nat -> (Nat -> B) -> R B) -> (Bool -> (Bool -> B) -> R B) -> (R Nat -> R Nat -> (Nat -> B) -> R B) -> R B
+EI = \B x: Nat. \f: Nat -> B. (\R::*->*. \fi: (Nat -> (Nat -> B) -> R B). \fb: (Bool -> (Bool -> B) -> R B). \fa: (R Nat -> R Nat -> (Nat -> B) -> R B). fi x f)
+EB = \B x: Bool. \f: Bool -> B. (\R::*->*. \fi: (Nat -> (Nat -> B) -> R B). \fb: (Bool -> (Bool -> B) -> R B). \fa: (R Nat -> R Nat -> (Nat -> B) -> R B). fb x f)
+
+EI [Nat] 1 succ
+
+foobar = \B. \x: Expr Nat. (\R:: *->*. \A. \fi: forall A . (Nat -> (Nat -> A) -> R A). \fb: forall A. (Bool -> (Bool -> A) -> R A). \fa: forall A . (R Nat -> R Nat -> (Nat -> A) -> R A). x [R] (fi [Nat]) (fb [Nat]) (fa [Nat]))
+=> type error: App: (Nat -> (Nat -> Nat) -> R Nat) -> (Bool -> (Bool -> Nat) -> R Nat) -> (R Nat -> R Nat -> (Nat -> Nat) -> R Nat) -> R Nat to Nat -> (Nat -> Nat) -> R Nat
+
+-- I don't understand why you can't apply that function. The input type of the function and the type of the argument seem to match.
+
+EAdd = \B x: Expr Nat. \y: Expr Nat. \f: Nat -> B. (\R::*->*. \fi: (Nat -> (Nat -> B) -> R B). \fb: (Bool -> (Bool -> B) -> R B). \fa: (R Nat -> R Nat -> (Nat -> B) -> R B). fa (x [R] fi fb fa))
+=> type error: App: (Nat -> (Nat -> Nat) -> R Nat) -> (Bool -> (Bool -> Nat) -> R Nat) -> (R Nat -> R Nat -> (Nat -> Nat) -> R Nat) -> R Nat to Nat -> (Nat -> B) -> R B
+```
+
+**TODO**: Try a version of `List` using the higher-kinded `R`.
+
+Finally able to reproduce the error with the following example:
+
+```haskell
+typo ListR = \X. forall R::*->*. (X -> R X -> R X) -> R X -> R X
+consR = \X. \h: X. \t: ListR X. (\R::*->*. \c: X -> R X -> R X. \n: R X. c h (t [R] c n))
+
+=> type error: App: (X -> R X -> R X) -> R X -> R X to X -> R X -> R X
+
+test = \X. \t: (\A. forall RL::*->*. (X -> RL X -> RL X) -> RL X -> RL X). (\R::*->*. \f: X -> R X -> R X. t [R] f)
+=> type error: App: (X -> R X -> R X) -> R X -> R X to X -> R X -> R X
+```
+
 ## My Failed Attempts
 
 ### Other Open Questions that I was Struggling With
