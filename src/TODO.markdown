@@ -836,6 +836,114 @@ evalB = \b: Bool. b
 evalAdd = \R. \e1 e2: R. 1
 ```
 
+### Church Encoding vs Scott Encoding without Recursive Types
+
+Let's compare their properties. First, the Church encoding of a list:
+
+```haskell
+Prelude> nilC c n = n
+Prelude> :t nilC
+nilC :: p1 -> p2 -> p2
+Prelude> consC h t c n = c h (t c n)
+Prelude> :t consC
+consC
+  :: t1 -> ((t1 -> t2 -> t3) -> t4 -> t2) -> (t1 -> t2 -> t3) -> t4 -> t3
+Prelude> xs1 = (consC 1 nilC)
+Prelude> :t xs1
+xs1 :: Num t1 => (t1 -> t2 -> t3) -> t2 -> t3
+Prelude> xs2 = consC 2 (xs1)
+Prelude> :t xs2
+xs2 :: Num t1 => (t1 -> t2 -> t2) -> t2 -> t2
+Prelude> xs3 = consC 3 xs2
+Prelude> :t xs3
+xs3 :: Num t1 => (t1 -> t2 -> t2) -> t2 -> t2
+Prelude> xs3 (+) 2
+8
+```
+
+Naive Scott encoding (in a language without recursive types):
+
+```haskell
+Prelude> nilS c n = n
+Prelude> consS h t c n = c h t
+Prelude> :t consS
+consS :: t1 -> t2 -> (t1 -> t2 -> t3) -> p -> t3
+Prelude> :t nilS
+nilS :: p1 -> p2 -> p2
+Prelude> :t consS 1 nilS
+consS 1 nilS :: Num t1 => (t1 -> (p1 -> p2 -> p2) -> t3) -> p -> t3
+Prelude> :t consS 2 (consS 1 nilS)
+consS 2 (consS 1 nilS)
+  :: (Num t2, Num t4) =>
+     (t2 -> ((t4 -> (p1 -> p2 -> p2) -> t5) -> p4 -> t5) -> t6)
+     -> p5 -> t6
+Prelude> :t consS 3 (consS 2 (consS 1 nilS))
+consS 3 (consS 2 (consS 1 nilS))
+  :: (Num t2, Num t4, Num t5) =>
+     (t2
+      -> ((t4 -> ((t5 -> (p1 -> p2 -> p2) -> t6) -> p4 -> t6) -> t7)
+          -> p5 -> t7)
+      -> t8)
+     -> p6 -> t8
+
+Prelude> nilS undefined 0
+0
+Prelude> consS 1 nilS (\a1 fa1 -> a1 + fa1 undefined 0) undefined
+1
+Prelude> consS 2 (consS 1 nilS) (\a2 fa2 -> a2 + fa2 (\a1 fa1 -> a1 + fa1 undefined 0) undefined) undefined
+3
+```
+
+Notice how the unpacking function keeps getting more and more convoluted for longer lists. You have to specify what to do with each element `a2`, `a1`, and the base value. With Church encoding, you had the same simple function used at all levels `(+)`.
+
+This means I could have done `a2 - (a1 + a0)` instead of `a2 + (a1 + a0)`:
+
+```haskell
+Prelude> consS 2 (consS 1 nilS) (\a2 fa2 -> a2 - fa2 (\a1 fa1 -> a1 + fa1 undefined 0) undefined) undefined
+1
+```
+
+The consequence of such a handwritten, element-by-element function is that there is no "typechecking". You can have elements of arbitrary types:
+
+```haskell
+Prelude> xs = consS "two" (consS 1 nilS)
+Prelude> xs (\a2 fa2 -> a2 ++ " (this is so wrong) " ++ show (fa2 (\a1 fa1 -> a1 + fa1 undefined 0) undefined)) undefined
+"two (this is so wrong) 1"
+```
+
+Contrast that to the Church encoded list:
+
+```haskell
+Prelude> xs = consC "two" (consC 1 nilC)
+
+<interactive>:48:25: error:
+    + No instance for (Num [Char]) arising from the literal '1'
+    + In the first argument of 'consC', namely '1'
+      In the second argument of 'consC', namely '(consC 1 nilC)'
+      In the expression: consC "two" (consC 1 nilC)
+```
+
+So, unless you have recursive types in your language, the arguments that are supposed to be of the recursive types (like the second argument of `consS`, which is supposed to be a list) may be given a value of any arbitrary type in the continuation.
+
+The [blog post](https://kseo.github.io/posts/2016-12-13-scott-encoding.html) describing Scott encoding works only because it is written in Haskell, which allows recursive type definitions like:
+
+```haskell
+newtype ListS a =
+   ListS {
+     unconsS :: forall r. (a -> ListS a -> r) -> r -> r
+   }
+```
+
+This is very different from our naive Scott encoding above, in which the "list" cannot be written in a form like above because its type changes based on its length and the different types of its elements.
+
+* * * * *
+
+Resources:
+
++ Blog post - [Scott encoding of Algebraic Data Types](https://kseo.github.io/posts/2016-12-13-scott-encoding.html)
+
++ Paper that introduced Scott encoding - [Comprehensive Encoding of Data Types and Algorithms in the Lambda-Calculus (Functional Pearl)](http://www.nlda-tw.nl/janmartin/papers/jmjansenLambdapaper.pdf)
+
 ## Algebraic Data Types (ADTs)
 
 + I've already got product types in the form of records.
