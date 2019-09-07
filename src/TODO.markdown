@@ -401,8 +401,6 @@ EAdd = \B x: Expr Nat. \y: Expr Nat. \f: Nat -> B. (\R::*->*. \fi: (Nat -> (Nat 
 => type error: App: (Nat -> (Nat -> Nat) -> R Nat) -> (Bool -> (Bool -> Nat) -> R Nat) -> (R Nat -> R Nat -> (Nat -> Nat) -> R Nat) -> R Nat to Nat -> (Nat -> B) -> R B
 ```
 
-**TODO**: Try a version of `List` using the higher-kinded `R`.
-
 Finally able to reproduce the error with the following example:
 
 ```haskell
@@ -414,6 +412,38 @@ consR = \X. \h: X. \t: ListR X. (\R::*->*. \c: X -> R X -> R X. \n: R X. c h (t 
 test = \X. \t: (\A. forall RL::*->*. (X -> RL X -> RL X) -> RL X -> RL X). (\R::*->*. \f: X -> R X -> R X. t [R] f)
 => type error: App: (X -> R X -> R X) -> R X -> R X to X -> R X -> R X
 ```
+
+**Important**: Simpler error:
+
+```haskell
+foo = \X. \R::*->*. \x: R X. \f: R X -> Nat. f x
+```
+
+* * * * *
+
+I suspect that Lynn's definition of `List` as `typo List = \X.forall R.(X->R->R)->R->R` (on https://crypto.stanford.edu/~blynn/lambda/typo.html) is somehow wrong or at least incomplete, because it does not use any recursive types, whereas the System F paper specifically mentions that you need a fixpoint operator to get such recursive type definitions.
+
+Can I somehow represent a `List` that does not behave like a recursively-defined list? The only difference seems to be that the continuation for `cons` has the type `X -> R -> R` instead of `X -> List X -> R`. You're losing information about the structure of the second argument. How does that restrict you?
+
+There's still a tight structure in `List` because the only source of R is either the first continuation `X -> R -> R` or the second argument `R`.
+
+```haskell
+let cnat = cons[Nat] in cnat 0(cnat (succ 1)(cnat 1 (nil[Nat])))
+=> \c n.c(\s z.z)(c(\s z.s(s z))(c(\s z.s z) n))
+
+consTwice = \X.\h:X.\t:List X.(\R.\c:X->R->R.\n:R. c h (c h(t [R] c n)))
+=> [consTwice:forallX.X -> List X -> (forallR.(X -> R -> R) -> R -> R)]
+
+let cnat = cons[Nat] in let ctwice = consTwice [Nat] in ctwice 0 (cnat (succ 1)(cnat 1 (nil[Nat])))
+=> \c n.c(\s z.z)(c(\s z.z)(c(\s z.s(s z))(c(\s z.s z) n)))
+
+let cnat = cons[Nat] in let ctwice = consTwice [Nat] in ctwice 0 (ctwice (succ 1)(ctwice 1 (nil[Nat])))
+=> \c n.c(\s z.z)(c(\s z.z)(c(\s z.s(s z))(c(\s z.s(s z))(c(\s z.s z)(c(\s z.s z) n)))))
+```
+
+The above experiment doesn't prove anything.
+
+I'm still not sure. What's the difference between `typo List = \X.forall R.(X->R->R)->R->R` and `typo ListR = \X.forall R.(X->ListR X->R)->R->R`? Does the latter give you any extra expressive power? If not, why did the System F introductory paper talk about needing a fixpoint type operator to get recursive types like `List a`? For example, on page 12 the author says "But term and type lambda abstractions are unnamed; the naming mechanism above is meta-notation. Recursion must be achieved indirectly."
 
 ## My Failed Attempts
 
