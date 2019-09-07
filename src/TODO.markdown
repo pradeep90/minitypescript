@@ -445,6 +445,91 @@ The above experiment doesn't prove anything.
 
 I'm still not sure. What's the difference between `typo List = \X.forall R.(X->R->R)->R->R` and `typo ListR = \X.forall R.(X->ListR X->R)->R->R`? Does the latter give you any extra expressive power? If not, why did the System F introductory paper talk about needing a fixpoint type operator to get recursive types like `List a`? For example, on page 12 the author says "But term and type lambda abstractions are unnamed; the naming mechanism above is meta-notation. Recursion must be achieved indirectly."
 
+Maybe it depends on the definition of the constructors.
+
+* * * * *
+
+Let's continue with my `Expr` attempt.
+
+First, let's try without the Yoneda lemma. A constructor that tries to return `Expr Int` won't need a function of the type `Int -> a` in order to return a polymorphic type `Expr a`.
+
+We represent the constructor `I :: forall b . Int -> (Int -> b) -> Expr b` by the continuation of type `forall b . Int -> (Int -> b) -> R`.
+
+Next, if we find `Expr Int` as a parameter type, we basically want to be able to use the branches of `Expr` that could return an `Expr Int`. So, we represent the recursive constructor `Add :: forall b . Expr Int -> Expr Int -> (Int -> b) -> Expr b` by the continuation of type ... Not sure. Maybe just give it `R`, `Add :: forall b . R -> R -> (Int -> b) -> R`.
+
+Maybe instead of typing it as:
+
+```haskell
+typo Expr = \B. forall R::*->*. (Nat -> (Nat -> B) -> R B) -> (Bool -> (Bool -> B) -> R B) -> (R Nat -> R Nat -> (Nat -> B) -> R B) -> R B
+```
+
+I should type it as:
+
+```haskell
+typo Expr = \B. forall R. (Nat -> (Nat -> B) -> R) -> (Bool -> (Bool -> B) -> R) -> (R -> R -> (Nat -> B) -> R) -> R
+```
+
+Worked:
+
+```haskell
+1 = succ 0
+2 = succ 1
+3 = succ 2
+
+plus = \x:Nat. \y:Nat. \X. \s: X->X. \z: X. x [X] s (y [X] s z)
+plus 1 1
+
+typo Bool = forall X . X -> X -> X
+true = \X t: X . \f: X . t
+false = \X t: X . \f: X . f
+true [Nat] 0 1
+if = \X b: Bool . \tb: X . \fb: X . (b [X] tb fb)
+if [Nat] true 1 0
+if [Nat] false 1 0
+
+id = \B. \x:B. x
+
+typo Expr = \B. forall R. (Nat -> R) -> (Bool -> R) -> (R -> R -> R) -> R
+EI = \B x: Nat. (\R. \fi: (Nat -> R). \fb: (Bool -> R). \fa: (R -> R -> R). fi x)
+EB = \B x: Bool. (\R. \fi: (Nat -> R). \fb: (Bool -> R). \fa: (R -> R -> R). fb x)
+EAdd = \B x: Expr Nat. \y: Expr Nat. (\R. \fi: (Nat -> R). \fb: (Bool -> R). \fa: (R -> R -> R). fa (x [R] fi fb fa) (y [R] fi fb fa))
+=> [EAdd:forall B.Expr Nat -> Expr Nat -> (forall R.(Nat -> R) -> (Bool -> R) -> (R -> R -> R) -> R)]
+
+test = EI [Nat] 3
+=> [test:forall R.(Nat -> R) -> (Bool -> R) -> (R -> R -> R) -> R]
+```
+
+```haskell
+EAdd [Nat] (EI [Nat] 1) (EI [Nat] 2) [Nat] (id [Nat]) (\x:Bool. 0) plus
+=> \s z.s(s(s z))
+
+EAdd [Nat] (EI [Nat] 1) (EB [Nat] true) [Nat] (id [Nat]) (\x:Bool. 3) plus
+=> \s z.s(s(s(s z)))
+```
+
+In general, we don't need to worry about the case where we get `EAdd [Nat] (EI [Nat] 1) (EB [Nat] true)` because `EB [Nat] true` has the type `(Nat -> Nat) -> (Bool -> Nat) -> (Nat -> Nat -> Nat) -> Nat`, which requires us to come up with `Bool -> Nat` or more generally `a -> Nat`, which people can't provide and thus we don't need to worry about.
+
+If we try to pass in the wrong value for the Bool branch, we of course get a type error:
+
+```haskell
+test = EAdd [Nat] (EI [Nat] 1) (EB [Nat] true) [Nat] (id [Nat]) (\x:Bool. true) plus
+=> type error: App: (Bool -> Nat) -> (Nat -> Nat -> Nat) -> Nat to Bool -> (forall X.X -> X -> X)
+
+test = EB [Nat] true [Nat]
+=> type error: App: (Bool -> Nat) -> (Nat -> Nat -> Nat) -> Nat to Bool -> (forall X.X -> X -> X)
+```
+
+**TODO**: Still not able to write `eval :: Expr t -> t`.
+
+```haskell
+eval = \R. \B. \x: Expr B. x [R] (\x: Nat. x) (\y: Bool. y) (\x: Nat. \y: Nat. plus x y)
+=> type error: App: (Nat -> R) -> (Bool -> R) -> (R -> R -> R) -> R to Nat -> Nat
+```
+
+It would be enough if I could do something like `eval = \R. \B. \x: Expr B. typecase R of | Nat -> x [Nat] ...; | Bool -> x [Bool] ...`.
+
+Actually, `eval :: (Expr Nat -> Nat) | (Expr Bool -> Bool)`. I need `eval [Nat] :: Expr Nat -> Nat` and `eval [Bool] :: Expr Bool -> Bool`. Look at my previous experiments with choosing a particular function based on a type and a constructor. I can do `eval [Nat] evalNat :: Expr Nat -> Nat` when I supply the dummy value `evalNat`.
+
 ## My Failed Attempts
 
 ### Other Open Questions that I was Struggling With
