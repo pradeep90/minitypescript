@@ -80,6 +80,10 @@ let test_fixture = "eval" >:::
     | _ -> runtime_error "wrong output"
   );
 
+  "tfun" >:: (fun () ->
+    assert_equal (Int 3) (eval [] (TFun ("Foo", KStar, Int 3)))
+  );
+
   "closure" >:: (fun () ->
     let rec closure = Closure ([("f", closure)], "x", Var "x")
     in
@@ -98,6 +102,11 @@ let test_fixture = "eval" >:::
 
   "app_recursive" >:: (fun () ->
     assert_equal (Int 120) (eval [] (App (Fun ("fact", "x", TArrow (TInt, TInt), If (Equal (Var "x", Int 1), Int 1, Times (Var "x", App (Var "fact", Minus (Var "x", Int 1))))), Int 5)));
+  );
+
+  "tapp" >:: (fun () ->
+    let id_fun = TFun ("Foo", KStar, Fun ("id", "x", TArrow (TParam "Foo", TParam "Foo"), Var "x")) in
+    assert_equal (Int 7) (eval [("yo", Int 7)] (App (TApp (id_fun, TInt), Var "yo")));
   );
 
   "record" >:: (fun () ->

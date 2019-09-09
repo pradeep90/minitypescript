@@ -92,21 +92,32 @@ let test_fixture = "type_check" >:::
   );
 
   "app_parameterized_function" >:: ( fun () ->
-    assert_equal TBool (type_of [] (App (Fun ("id", "x", TArrow (TParam "Foo", TParam "Foo"), Var "x"), Bool true)));
-    assert_equal (TArrow (TParam "Foo", TParam "Foo")) (type_of [] (App (Fun ("id", "x", TArrow (TParam "Foo", TParam "Foo"), Var "x"), Fun ("id", "x", TArrow (TParam "Foo", TParam "Foo"), Var "x"))));
-    assert_equal TInt (type_of [] (App (App (Fun ("const", "x", TArrow (TParam "Foo", TArrow (TParam "Bar", TParam "Foo")), Fun ("f", "y", TArrow (TParam "Bar", TParam "Foo"), Var "x")), Int 1), Bool true)));
+    assert_equal (TArrow (TBool, TBool)) (type_of [] (TApp (TFun ("Foo", KStar, Fun ("id", "x", TArrow (TParam "Foo", TParam "Foo"), Var "x")), TBool)));
+    assert_equal TBool (type_of [] (App (TApp (TFun ("Foo", KStar, Fun ("id", "x", TArrow (TParam "Foo", TParam "Foo"), Var "x")), TBool), Bool true)));
 
-    assert_equal (TRecord [("a", TInt); ("b", TInt)]) (type_of [] (App (Fun ("f", "x", TArrow (TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")]), Var "x"), Record [("a", Int 1); ("b", Int 2)])));
+    let id_fun = TFun ("Foo", KStar, Fun ("id", "x", TArrow (TParam "Foo", TParam "Foo"), Var "x"))
+    and id_fun_type = TForAll ("Foo", KStar, TArrow (TParam "Foo", TParam "Foo"))
+    in
+    assert_equal (id_fun_type) (type_of [] (App (TApp (id_fun, id_fun_type), id_fun)));
 
-    assert_type_error (fun _ -> type_of [] (App (Fun ("f", "x", TArrow (TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")]), Var "x"), Record [("a", Int 1); ("b", Bool true)]))) "cannot unify the constraints that type parameter Foo : bool and Foo : int";
+    assert_equal TInt (type_of [] (App (App (TApp (TApp (TFun ("Foo", KStar, TFun ("Bar", KStar, Fun ("const", "x", TArrow (TParam "Foo", TArrow (TParam "Bar", TParam "Foo")), Fun ("f", "y", TArrow (TParam "Bar", TParam "Foo"), Var "x")))), TInt), TBool), Int 1), Bool true)));
 
-    (* One of these two tests will fail if the type picked for Foo is not the
-       most general type. *)
-    assert_equal (TRecord [("a", TRecord [("c", TInt)]); ("b", TRecord [("c", TInt)])]) (type_of [] (App (Fun ("f", "x", TArrow (TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")]), Var "x"), Record [("a", Record [("c", Int 1)]); ("b", Record [("c", Int 1); ("d", Bool true)])])));
-    assert_equal (TRecord [("a", TRecord [("c", TInt)]); ("b", TRecord [("c", TInt)])]) (type_of [] (App (Fun ("f", "x", TArrow (TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")]), Var "x"), Record [("a", Record [("c", Int 1); ("d", Bool true)]); ("b", Record [("c", Int 1)])])));
+    assert_equal (TRecord [("a", TInt); ("b", TInt)]) (type_of [] (App (TApp (TFun ("Foo", KStar, Fun ("f", "x", TArrow (TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")]), Var "x")), TInt), Record [("a", Int 1); ("b", Int 2)])));
 
-    assert_equal TInt (type_of [] (App (Fun ("dummy", "f", TArrow (TArrow (TParam "A", TParam "B"), TInt), Int 3), Fun ("increment", "x", TArrow (TInt, TInt), Plus (Var "x", Int 1)))));
-    assert_equal (TArrow (TInt, TInt)) (type_of [] (App (Fun ("dummy", "f", TArrow (TArrow (TParam "A", TParam "B"), TArrow (TParam "A", TParam "B")), Var "f"), Fun ("increment", "x", TArrow (TInt, TInt), Plus (Var "x", Int 1)))));
+    assert_type_error (fun _ -> type_of [] (App (TApp (TFun ("Foo", KStar, Fun ("f", "x", TArrow (TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")]), Var "x")), TInt), Record [("a", Int 1); ("b", Bool true)]))) "incompatible types; {a : int, b : bool} is not a subtype of {a : int, b : int}";
+
+    assert_equal (TRecord [("a", TRecord [("c", TInt)]); ("b", TRecord [("c", TInt)])]) (type_of [] (App (TApp (TFun("Foo", KStar, Fun ("f", "x", TArrow (TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")]), Var "x")), TRecord [("c", TInt)]), Record [("a", Record [("c", Int 1)]); ("b", Record [("c", Int 1); ("d", Bool true)])])));
+    assert_type_error (fun _ -> type_of [] (App (TApp (TFun("Foo", KStar, Fun ("f", "x", TArrow (TRecord [("a", TParam "Foo"); ("b", TParam "Foo")], TRecord [("a", TParam "Foo"); ("b", TParam "Foo")]), Var "x")), TRecord [("c", TInt); ("d", TBool)]), Record [("a", Record [("c", Int 1)]); ("b", Record [("c", Int 1); ("d", Bool true)])]))) "incompatible types; {a : {c : int}, b : {c : int, d : bool}} is not a subtype of {a : {c : int, d : bool}, b : {c : int, d : bool}}";
+
+    assert_equal TInt (type_of [] (App (TApp (TApp (TFun ("B", KStar, TFun ("A", KStar, Fun ("dummy", "f", TArrow (TArrow (TParam "A", TParam "B"), TInt), Int 3))), TInt), TInt), Fun ("increment", "x", TArrow (TInt, TInt), Plus (Var "x", Int 1)))));
+    assert_equal (TArrow (TInt, TInt)) (type_of [] (App (TApp (TApp (TFun ("B", KStar, TFun ("A", KStar, Fun ("dummy", "f", TArrow (TArrow (TParam "A", TParam "B"), TArrow (TParam "A", TParam "B")), Var "f"))), TInt), TInt), Fun ("increment", "x", TArrow (TInt, TInt), Plus (Var "x", Int 1)))));
+  );
+
+  "tapp" >:: ( fun () ->
+    let id_fun = TFun ("Foo", KStar, Fun ("id", "x", TArrow (TParam "Foo", TParam "Foo"), Var "x"))
+    in
+    assert_equal (TArrow (TInt, TInt)) (type_of [] (TApp (id_fun, TInt)));
+    assert_type_error (fun _ -> type_of [] (TApp (Int 3, TInt))) "expected `forall`, but got int";
   );
 
   "record" >:: ( fun () ->
@@ -149,22 +160,22 @@ let test_fixture = "type_check" >:::
     assert_equal (TRecord [("a", TParam "foo"); ("b", TParam "bar")]) (make_alias_param (TRecord [("a", TAlias "foo"); ("b", TAlias "bar")]));
   );
 
-  "param_constraints" >:: ( fun () ->
-    assert_equal [] (param_constraints TInt TInt);
-    assert_equal [("bar", TInt)] (param_constraints TInt (TParam "bar"));
-
-    assert_equal [("foo", TInt)] (param_constraints (TParam "foo") TInt);
-    assert_equal [("foo", TBool)] (param_constraints (TParam "foo") TBool);
-    assert_equal [] (param_constraints (TParam "foo") (TParam "foo"));
-    assert_type_error (fun _ -> param_constraints (TParam "foo") (TParam "bar")) "cannot unify different type parameters foo and bar";
-    assert_equal [("foo", TArrow (TInt, TBool))] (param_constraints (TParam "foo") (TArrow (TInt, TBool)));
-    assert_equal [("foo", TRecord [("a", TInt)])] (param_constraints (TParam "foo") (TRecord [("a", TInt)]));
-    assert_equal [("foo", TInt)] (param_constraints (TRecord [("a", TParam "foo")]) (TRecord [("a", TInt); ("b", TBool)]));
-    assert_equal [("foo", TInt); ("foo", TBool)] (param_constraints (TRecord [("a", TParam "foo"); ("b", TParam "foo")]) (TRecord [("a", TInt); ("b", TBool)]));
-    assert_equal [("bar", TBool)] (param_constraints (TArrow (TInt, TParam "bar")) (TArrow (TInt, TBool)));
-
-    assert_type_error (fun _ -> param_constraints (TRecord [("a", TParam "foo"); ("b", TParam "foo")]) TInt) "cannot unify {a : foo, b : foo} and int";
-  );
+  (* "param_constraints" >:: ( fun () ->
+   *   assert_equal [] (param_constraints TInt TInt);
+   *   assert_equal [("bar", TInt)] (param_constraints TInt (TParam "bar"));
+   *
+   *   assert_equal [("foo", TInt)] (param_constraints (TParam "foo") TInt);
+   *   assert_equal [("foo", TBool)] (param_constraints (TParam "foo") TBool);
+   *   assert_equal [] (param_constraints (TParam "foo") (TParam "foo"));
+   *   assert_type_error (fun _ -> param_constraints (TParam "foo") (TParam "bar")) "cannot unify different type parameters foo and bar";
+   *   assert_equal [("foo", TArrow (TInt, TBool))] (param_constraints (TParam "foo") (TArrow (TInt, TBool)));
+   *   assert_equal [("foo", TRecord [("a", TInt)])] (param_constraints (TParam "foo") (TRecord [("a", TInt)]));
+   *   assert_equal [("foo", TInt)] (param_constraints (TRecord [("a", TParam "foo")]) (TRecord [("a", TInt); ("b", TBool)]));
+   *   assert_equal [("foo", TInt); ("foo", TBool)] (param_constraints (TRecord [("a", TParam "foo"); ("b", TParam "foo")]) (TRecord [("a", TInt); ("b", TBool)]));
+   *   assert_equal [("bar", TBool)] (param_constraints (TArrow (TInt, TParam "bar")) (TArrow (TInt, TBool)));
+   *
+   *   assert_type_error (fun _ -> param_constraints (TRecord [("a", TParam "foo"); ("b", TParam "foo")]) TInt) "cannot unify {a : foo, b : foo} and int";
+   * ); *)
 
   "unify_constraints" >:: ( fun () ->
     assert_equal [] (unify_constraints [] []);
@@ -173,6 +184,11 @@ let test_fixture = "type_check" >:::
 
     assert_equal [("bar", TBool); ("foo", TRecord [("a", TInt)]); ("foo", TRecord [("a", TInt)])] (unify_constraints [("foo", TRecord [("a", TInt)])] [("foo", TRecord [("a", TInt); ("b", TBool)]); ("bar", TBool)]);
     assert_equal [("bar", TBool); ("foo", TRecord [("a", TInt)]); ("foo", TRecord [("a", TInt); ("b", TBool)])] (unify_constraints [("foo", TRecord [("a", TInt); ("b", TBool)])] [("foo", TRecord [("a", TInt)]); ("bar", TBool)]);
+  );
+
+  "substitute_params_maybe" >:: ( fun () ->
+    assert_equal (TForAll ("Bar", KStar, TInt)) (substitute_params_maybe [("Foo", TInt)] (TForAll ("Bar", KStar, TParam "Foo")));
+    assert_equal (TForAll ("Foo", KStar, TParam "Foo")) (substitute_params_maybe [("Foo", TInt)] (TForAll ("Foo", KStar, TParam "Foo")));
   );
 ]
 

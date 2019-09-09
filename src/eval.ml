@@ -58,14 +58,16 @@ let rec eval env = function
 	   Bool true -> eval env e2
 	 | Bool false -> eval env e3
 	 | _ -> runtime_error "boolean value expected in conditional")
-  | Fun (f, x, _, e) ->
-      let rec c = Closure ((f,c)::env, x, e) in c
+  | Fun (f, x, ty, e) ->
+     let rec c = Closure ((f,c)::env, x, e) in c
+  | TFun (_, _, e) -> eval env e
   | Closure _ as e -> e
   | Let (x, e1, e2) -> eval ((x, eval env e1)::env) e2
   | App (e1, e2) ->
       (match eval env e1 with
 	   Closure (env', x, e) -> eval ((x,eval env e2)::env') e
 	 | _ -> runtime_error "invalid application")
+  | TApp (e, _) -> eval env e
   | Record rs ->
       Record (List.map (fun (l,e) -> (l, eval env e)) rs)
   | Project (e, l) ->

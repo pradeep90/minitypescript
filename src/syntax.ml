@@ -6,6 +6,10 @@ type name = string
 (** The type of field names *)
 type label = string
 
+(** Kinds. *)
+type kind =
+  | KStar (** Base kind [*]. *)
+
 (** Types *)
 type ty =
   | TInt (** integers [int] *)
@@ -14,6 +18,7 @@ type ty =
   | TRecord of (label * ty) list (** records [{l1:ty1, ..., lN:tyN}] *)
   | TAlias of name (** type alias from type declaration [Car] *)
   | TParam of name (** type parameter like in [Container A] *)
+  | TForAll of name * kind * ty (** parametric polymorphism [forall A: * . A -> A] *)
 
 (** Expressions *)
 type expr =
@@ -31,9 +36,11 @@ type expr =
   | Not of expr (** negation [not e] *)
   | If of expr * expr * expr (** conditional [if e1 then e2 else e3] *)
   | Fun of name * name * ty * expr (** recursive function [fun f(x : ty1):ty2 is e] *)
+  | TFun of name * kind * expr (** type abstraction [\A:K. e] *)
   | Closure of environment * name * expr (** closure (internal value) *)
   | Let of name * expr * expr (** local definition [let x = e1 in e2] *)
   | App of expr * expr (** application [e1 e2] *)
+  | TApp of expr * ty (** type application [e [A]] *)
   | Record of (label * expr) list (** record [{l1=e1, ..., lN=eN}] *)
   | Project of expr * label (** field projection [e.l] *)
 
@@ -45,6 +52,10 @@ type toplevel_cmd =
   | Expr of expr (** an expression to be evaluated *)
   | Def of name * expr (** Global definition [let x = e] *)
   | TypeDecl of name * ty (** type declaration *)
+
+(** [string_of_kind k] converts a kind [k] to a string. *)
+let rec string_of_kind = function
+  | KStar -> "*"
 
 (** [string_of_type ty] converts type [ty] to a string. *)
 let string_of_type ty =
@@ -61,6 +72,7 @@ let string_of_type ty =
 	| TArrow (ty1, ty2) -> (1, (to_str 1 ty1) ^ " -> " ^ (to_str 0 ty2))
         | TAlias name -> (4, name)
         | TParam name -> (4, name)
+        | TForAll (name, kind, ty) -> (4, "forall " ^ name ^ ": " ^ string_of_kind kind ^ ". " ^ to_str 0 ty)
     in
       if m > n then str else "(" ^ str ^ ")"
   in

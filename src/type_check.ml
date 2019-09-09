@@ -51,15 +51,18 @@ let rec type_of ctx = function
          check ((f, TArrow(ty1_concrete,ty2_concrete)) :: (x, ty1_concrete) :: ctx) e ty2_concrete ;
          TArrow (ty1_concrete, ty2_concrete)
       | _ -> type_error ("expected function type but got " ^ string_of_type ty))
+  | TFun (name, kind, e) -> TForAll (name, kind, type_of ctx e)
   | Closure _ -> assert false
   | Let (x, e1, e2) -> type_of ((x, type_of ctx e1)::ctx) e2
   | App (e1, e2) ->
-      (match type_of ctx e1 with
-	   TArrow (ty1, ty2) ->
-            let unified_ctx = unify_constraints [] (param_constraints ty1 (type_of ctx e2)) in
-            check ctx e2 (substitute_params_maybe unified_ctx ty1);
-            (substitute_params_maybe unified_ctx ty2)
-	 | _ -> type_error "function expected")
+     (match type_of ctx e1 with
+	TArrow (ty1, ty2) -> check ctx e2 ty1; ty2
+      | _ -> type_error "function expected")
+  | TApp (e1, ty_arg) ->
+     (match type_of ctx e1 with
+      | TForAll (name, _, ty) -> substitute_params_maybe ((name, ty_arg)::ctx) ty
+      | _ as ty -> type_error ("expected `forall`, but got " ^ string_of_type ty)
+     )
   | Record rs ->
       check_labels (List.map fst  rs) ;
       TRecord (List.map (fun (l, e) -> (l, type_of ctx e)) rs)
@@ -96,6 +99,7 @@ and substitute_aliases_maybe ctx ty =
   | TAlias name -> (try List.assoc name ctx with Not_found -> ty)
   | TArrow (ty_in, ty_out) -> TArrow (substitute_aliases_maybe ctx ty_in, substitute_aliases_maybe ctx ty_out)
   | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, substitute_aliases_maybe ctx ty')) tss)
+  | TForAll (name, kind, ty) -> TForAll (name, kind, substitute_aliases_maybe ctx ty)
 
 (** [has_no_aliases ty] returns true iff there are no type aliases within [ty]. *)
 and has_no_aliases ty =
@@ -104,6 +108,7 @@ and has_no_aliases ty =
   | TAlias _ -> false
   | TArrow (ty_in, ty_out) -> has_no_aliases ty_in && has_no_aliases ty_out
   | TRecord tss -> List.for_all (fun (l, ty') -> has_no_aliases ty') tss
+  | TForAll (name, kind, ty) -> has_no_aliases ty
 
 (** [has_no_parameters ty] returns true iff there are no type parameters within [ty]. *)
 and has_no_parameters ty =
@@ -112,6 +117,7 @@ and has_no_parameters ty =
   | TParam _ -> false
   | TArrow (ty_in, ty_out) -> has_no_parameters ty_in && has_no_parameters ty_out
   | TRecord tss -> List.for_all (fun (l, ty') -> has_no_parameters ty') tss
+  | TForAll (name, kind, ty) -> type_error "TODO: remove this function has_no_parameters"
 
 (** [make_alias_param ty] returns [ty] with type aliases turned into type
    parameters. *)
@@ -121,6 +127,7 @@ and make_alias_param ty =
   | TAlias name -> TParam name
   | TArrow (ty_in, ty_out) -> TArrow (make_alias_param ty_in, make_alias_param ty_out)
   | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, make_alias_param ty')) tss)
+  | TForAll (name, kind, ty) -> TForAll (name, kind, make_alias_param ty)
 
 (** [param_constraints ty ty_sub] returns the type-parameter constraints
    needed to unify [ty] and [ty_sub]. All we know is that ty_sub has to be a
@@ -163,3 +170,5 @@ and substitute_params_maybe ctx ty =
   | TParam name -> (try List.assoc name ctx with Not_found -> ty)
   | TArrow (ty_in, ty_out) -> TArrow (substitute_params_maybe ctx ty_in, substitute_params_maybe ctx ty_out)
   | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, substitute_params_maybe ctx ty')) tss)
+  | TForAll (name, kind, ty) ->
+     TForAll (name, kind, substitute_params_maybe ((name, TParam name)::ctx) ty)
