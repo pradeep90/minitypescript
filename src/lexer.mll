@@ -32,6 +32,7 @@ rule token = parse
   | "then"          { THEN }
   | "true"          { TRUE }
   | "type"          { TYPEDECL }
+  | "forall"        { FORALL }
   | ";;"            { SEMICOLON2 }
   | '('             { LPAREN }
   | ')'             { RPAREN }
@@ -47,6 +48,9 @@ rule token = parse
   | '='             { EQUAL }
   | '{'             { LBRACE }
   | '}'             { RBRACE }
+  | '\\'            { LAMBDASLASH }
+  | '['             { LSQUARE }
+  | ']'             { RSQUARE }
   | var             { VAR (lexeme lexbuf) }
   | eof             { EOF }
 

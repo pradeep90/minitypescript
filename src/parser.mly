@@ -18,6 +18,7 @@
 %token SEMICOLON2
 %token EOF
 %token TYPEDECL
+%token LAMBDASLASH FORALL LSQUARE RSQUARE
 
 %start toplevel
 %start file
@@ -68,18 +69,26 @@ def:
 expr:
   | non_app             { $1 }
   | app                 { $1 }
+  | tapp                { $1 }
   | arith               { $1 }
   | boolean             { $1 }
   | LET VAR EQUAL expr IN expr { Let ($2, $4, $6) }
   | IF expr THEN expr ELSE expr	       { If ($2, $4, $6) }
   | FUN VAR LPAREN VAR RPAREN COLON ty IS expr { Fun ($2, $4, $7, $9) }
+  | LAMBDASLASH VAR COLON kind PERIOD expr { TFun ($2, $4, $6) }
 
 typedecl:
   | TYPEDECL VAR EQUAL ty   { TypeDecl ($2, $4) }
 
 app:
     app non_app         { App ($1, $2) }
+  | tapp non_app        { App ($1, $2) }
   | non_app non_app     { App ($1, $2) }
+
+tapp:
+  | tapp LSQUARE ty RSQUARE	{ TApp ($1, $3) }
+  | app LSQUARE ty RSQUARE	{ TApp ($1, $3) }
+  | non_app LSQUARE ty RSQUARE	{ TApp ($1, $3) }
 
 non_app:
     VAR		        	  { Var $1 }
@@ -113,13 +122,14 @@ field:
   | VAR EQUAL expr          { ($1, $3) }
 
 ty:
-    TBOOL	 	     { TBool }
-  | TINT         	     { TInt }
-  | ty TARROW ty             { TArrow ($1, $3) }
-  | VAR                      { TAlias ($1) }
-  | LBRACE RBRACE            { TRecord [] }
-  | LBRACE trecord_list RBRACE { TRecord $2 }
-  | LPAREN ty RPAREN         { $2 }
+    TBOOL                               { TBool }
+  | TINT                                { TInt }
+  | ty TARROW ty                        { TArrow ($1, $3) }
+  | VAR                                 { TAlias ($1) }
+  | FORALL VAR COLON kind PERIOD ty     { TForAll ($2, $4, $6) }
+  | LBRACE RBRACE                       { TRecord [] }
+  | LBRACE trecord_list RBRACE          { TRecord $2 }
+  | LPAREN ty RPAREN                    { $2 }
 
 trecord_list:
   | tfield                    { [$1] }
@@ -127,5 +137,8 @@ trecord_list:
 
 tfield:
   | VAR COLON ty              { ($1, $3) }
+
+kind:
+  | TIMES                     { KStar }
 
 %%

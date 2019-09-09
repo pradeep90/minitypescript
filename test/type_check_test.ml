@@ -58,6 +58,19 @@ let test_fixture = "type_check" >:::
     assert_equal false (subtype (TArrow (TRecord [("a", TInt)], TRecord [("a", TInt)])) (TArrow (TRecord [], TRecord [])));
   );
 
+  "subtype_forall" >:: ( fun () ->
+    assert_equal true (subtype (TForAll ("A", KStar, TInt)) (TForAll ("A", KStar, TInt)));
+    let forall_arrow = TForAll ("A", KStar, TArrow (TParam "A", TParam "A"))
+    and forall_arrow2 = TForAll ("B", KStar, TArrow (TParam "B", TParam "B"))
+    and forall_arrow_same_name = TForAll ("A", KStar, TArrow (TParam "A", TParam "A"))
+    in
+    assert_equal true (subtype forall_arrow forall_arrow);
+    assert_equal true (subtype forall_arrow forall_arrow_same_name);
+    assert_equal true (subtype forall_arrow forall_arrow2);
+    assert_equal false (subtype forall_arrow (TForAll ("A", KStar, TInt)));
+    assert_equal false (subtype forall_arrow (TForAll ("A", KStar, TArrow (TInt, TParam "A"))));
+  );
+
   "if" >:: ( fun () ->
     assert_equal (TRecord [("a", TInt)]) (type_of [] (If (Bool true, Record [("a", Int 8)], Record [("a", Int 7); ("b", Bool false)])));
     assert_equal (TRecord [("a", TInt)]) (type_of [] (If (Bool true, Record [("a", Int 7); ("b", Bool false)], Record [("a", Int 8)])));
@@ -88,7 +101,7 @@ let test_fixture = "type_check" >:::
   "app" >:: ( fun () ->
     assert_equal TInt (type_of [] (App (Fun ("f", "x", TArrow (TInt, TInt), Var "x"), Int 8)));
     assert_type_error (fun _ -> type_of [] (App (Fun ("f", "x", TArrow (TInt, TInt), Var "x"), Bool true))) "incompatible types; bool is not a subtype of int";
-    assert_type_error (fun _ -> type_of [] (App (Int 7, Bool true))) "function expected";
+    assert_type_error (fun _ -> type_of [] (App (Int 7, Bool true))) "expected function but got int";
   );
 
   "app_parameterized_function" >:: ( fun () ->
@@ -99,6 +112,11 @@ let test_fixture = "type_check" >:::
     and id_fun_type = TForAll ("Foo", KStar, TArrow (TParam "Foo", TParam "Foo"))
     in
     assert_equal (id_fun_type) (type_of [] (App (TApp (id_fun, id_fun_type), id_fun)));
+
+    let foo_fun = TFun ("Foo", KStar, Fun ("foo", "x", TArrow (TParam "Foo", TInt), Int 3))
+    and foo_type = TForAll ("Foo", KStar, TArrow (TParam "Foo", TInt))
+    in
+    assert_equal TInt (type_of [] (App (TApp (foo_fun, foo_type), foo_fun)));
 
     assert_equal TInt (type_of [] (App (App (TApp (TApp (TFun ("Foo", KStar, TFun ("Bar", KStar, Fun ("const", "x", TArrow (TParam "Foo", TArrow (TParam "Bar", TParam "Foo")), Fun ("f", "y", TArrow (TParam "Bar", TParam "Foo"), Var "x")))), TInt), TBool), Int 1), Bool true)));
 

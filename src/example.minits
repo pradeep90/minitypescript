@@ -38,30 +38,50 @@ create_bar_record true
 
 ;;
 
-let id = fun f(x): A -> A is x
+let id = \A:* . fun f(x): A -> A is x
 ;;
 
-id 3;;
-id true;;
-id {a = 1};;
-id id;;
+id [int] 3;;
 
-let const = fun f(x): A -> B -> A is fun g(y): B -> A is x
-;;
-const 1 2;;
-const true 3;;
-const 7 id;;
+id [bool] true;;
+id [{a: int}] {a = 1};;
 
-let compose = fun f1(f): (B -> C) -> (A -> B) -> (A -> C) is
-    fun f2(g): (A -> B) -> A -> C is
-    	fun f3(x): A -> C is
-	    f (g x)
+let bar = fun g(x): int -> (forall A:*. A -> int) is
+    \A:*. fun f(x): A -> int is 3
 ;;
 
-compose increment increment 3
+bar 3 [forall A:*. int] (\A: *. 3);;
+
+let foo = \A:*. fun f(x): A -> int is 3
+;;
+
+foo [forall A:*. int] (\A:*. 3);;
+
+# Don't know why this gives a type error.
+foo [forall A:*. A -> int] foo;;
+
+foo [forall A:*. A -> A] id;;
+
+id [forall A:*. A -> A] id;;
+
+let const = \A:*. \B:*. fun f(x): A -> B -> A is fun g(y): B -> A is x
+;;
+const [int] [int] 1 2;;
+const [bool] [int] true 3;;
+
+# const [int] [forall A:*. A -> A] 7 id;;
+
+let compose = \A:*. \B:*. \C:*.
+    fun f1(f): (B -> C) -> (A -> B) -> (A -> C) is
+    	fun f2(g): (A -> B) -> A -> C is
+    	    fun f3(x): A -> C is
+	    	f (g x)
+;;
+
+compose [int] [int] [int] increment increment 3
 
 ;;
 
-let fxx = fun f1(x): (A -> A) -> A -> A is x x
-;;
-fxx id
+# let fxx = fun f1(x): (forall A:*. A -> A) -> (forall B:*. B -> B) is x [forall C:*. C -> C] x
+# ;;
+# fxx [forall A:*. A -> A] id

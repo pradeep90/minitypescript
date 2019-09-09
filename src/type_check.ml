@@ -57,7 +57,7 @@ let rec type_of ctx = function
   | App (e1, e2) ->
      (match type_of ctx e1 with
 	TArrow (ty1, ty2) -> check ctx e2 ty1; ty2
-      | _ -> type_error "function expected")
+      | _ as ty -> type_error ("expected function but got " ^ string_of_type ty))
   | TApp (e1, ty_arg) ->
      (match type_of ctx e1 with
       | TForAll (name, _, ty) -> substitute_params_maybe ((name, ty_arg)::ctx) ty
@@ -88,6 +88,8 @@ and subtype ty1 ty2 =
 	   List.for_all
 	     (fun (l,ty) -> List.exists (fun (l',ty') -> l = l' && subtype ty' ty) ts1)
 	     ts2
+       | TForAll (n1, k1, ty1), TForAll (n2, k2, ty2) ->
+          subtype (substitute_params_maybe [(n1, TParam n2)] ty1) ty2
        | _, _ -> false
     )
 
