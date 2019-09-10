@@ -6,6 +6,7 @@ BUILD=native
 
 SRCDIR = src
 TESTDIR = test
+BINDIR = bin
 
 default:
 	@echo "To compile all languages run:                 make all"
@@ -26,19 +27,32 @@ repl:
 	ocaml -I _build/src
 
 .PHONY: test
-test: test_systemf
+test: test_systemf test_fomega
 
 .PHONY: test_systemf
 test_systemf:
 	$(OCAMLBUILD) -pkgs oUnit -I $(SRCDIR) -I $(SRCDIR)/systemf $(TESTDIR)/systemf/eval_test.$(BUILD) $(TESTDIR)/systemf/type_check_test.$(BUILD)
-	./eval_test.native
-	./type_check_test.native
+	mv ./eval_test.native ./type_check_test.native $(BINDIR)/systemf
+	$(BINDIR)/systemf/eval_test.native
+	$(BINDIR)/systemf/type_check_test.native
 
-example: all example_systemf
+.PHONY: test_fomega
+test_fomega:
+	$(OCAMLBUILD) -pkgs oUnit -I $(SRCDIR) -I $(SRCDIR)/fomega -install-bin-dir bin/fomega $(TESTDIR)/fomega/eval_test.$(BUILD) $(TESTDIR)/fomega/type_check_test.$(BUILD)
+	mv ./eval_test.native ./type_check_test.native $(BINDIR)/fomega
+	$(BINDIR)/fomega/eval_test.native
+	$(BINDIR)/fomega/type_check_test.native
+
+example: all example_systemf example_fomega
 
 .PHONY: example_systemf
 example_systemf:
 	./systemf.native $(SRCDIR)/systemf/example.systemf
 
+.PHONY: example_fomega
+example_fomega:
+	./fomega.native $(SRCDIR)/fomega/example.fomega
+
 clean:
 	$(OCAMLBUILD) -clean
+	rm -f $(BINDIR)/systemf/* $(BINDIR)/fomega/*
