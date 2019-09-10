@@ -108,7 +108,7 @@ record_list:
   | field COMMA record_list { $1 :: $3 }
 
 field:
-  | VAR EQUAL expr          { ($1, $3) }
+  | VAR COLON expr          { ($1, $3) }
 
 ty:
     TBOOL                               { TBool }
