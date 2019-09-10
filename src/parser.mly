@@ -17,7 +17,6 @@
 %token LET IN
 %token SEMICOLON2
 %token EOF
-%token TYPEDECL
 %token LAMBDASLASH FORALL LSQUARE RSQUARE
 
 %start toplevel
@@ -42,7 +41,6 @@ file:
   | EOF                      { [] }
   | filedef                  { $1 }
   | fileexpr                 { $1 }
-  | filetypedecl             { $1 }
 
 filedef:
   | def EOF                  { [$1] }
@@ -53,15 +51,9 @@ fileexpr:
   | expr EOF                 { [Expr $1] }
   | expr SEMICOLON2 file     { Expr $1 :: $3 }
 
-filetypedecl:
-  | typedecl EOF             { [$1] }
-  | typedecl SEMICOLON2 file { $1 :: $3 }
-  | typedecl filetypedecl    { $1 :: $2 }
-
 toplevel:
   | expr EOF                 { Expr $1 }
   | def EOF                  { $1 }
-  | typedecl EOF             { $1 }
 
 def:
   | LET VAR EQUAL expr { Def ($2, $4) }
@@ -76,9 +68,6 @@ expr:
   | IF expr THEN expr ELSE expr	       { If ($2, $4, $6) }
   | FUN VAR LPAREN VAR RPAREN COLON ty IS expr { Fun ($2, $4, $7, $9) }
   | LAMBDASLASH VAR COLON kind PERIOD expr { TFun ($2, $4, $6) }
-
-typedecl:
-  | TYPEDECL VAR EQUAL ty   { TypeDecl ($2, $4) }
 
 app:
     app non_app         { App ($1, $2) }
@@ -125,7 +114,7 @@ ty:
     TBOOL                               { TBool }
   | TINT                                { TInt }
   | ty TARROW ty                        { TArrow ($1, $3) }
-  | VAR                                 { TAlias ($1) }
+  | VAR                                 { TParam $1 }
   | FORALL VAR COLON kind PERIOD ty     { TForAll ($2, $4, $6) }
   | LBRACE RBRACE                       { TRecord [] }
   | LBRACE trecord_list RBRACE          { TRecord $2 }

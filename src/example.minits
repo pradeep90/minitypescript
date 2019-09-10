@@ -19,23 +19,7 @@ plus u (conjugate u)
 conjugate {re = 5, im = 7, foo = {}, bar = conjugate}
 ;;
 
-type Foo = int
-type BarRecord = {a: Foo, b: {c: Foo, d: bool}}
-;;
-
-let increment = fun f(x): Foo -> Foo is x + 1
-;;
-
-let create_bar_record = fun g(x): bool -> BarRecord is {a = 1, b = {c = 2, d = x}}
-
-;;
-
-increment 3
-
-;;
-
-create_bar_record true
-
+let increment = fun f(x): int -> int is x + 1
 ;;
 
 let id = \A:* . fun f(x): A -> A is x
@@ -46,22 +30,6 @@ id [int] 3;;
 id [bool] true;;
 id [{a: int}] {a = 1};;
 
-let bar = fun g(x): int -> (forall A:*. A -> int) is
-    \A:*. fun f(x): A -> int is 3
-;;
-
-bar 3 [forall A:*. int] (\A: *. 3);;
-
-let foo = \A:*. fun f(x): A -> int is 3
-;;
-
-foo [forall A:*. int] (\A:*. 3);;
-
-# Don't know why this gives a type error.
-foo [forall A:*. A -> int] foo;;
-
-foo [forall A:*. A -> A] id;;
-
 id [forall A:*. A -> A] id;;
 
 let const = \A:*. \B:*. fun f(x): A -> B -> A is fun g(y): B -> A is x
@@ -69,7 +37,7 @@ let const = \A:*. \B:*. fun f(x): A -> B -> A is fun g(y): B -> A is x
 const [int] [int] 1 2;;
 const [bool] [int] true 3;;
 
-# const [int] [forall A:*. A -> A] 7 id;;
+const [int] [forall A:*. A -> A] 7 id;;
 
 let compose = \A:*. \B:*. \C:*.
     fun f1(f): (B -> C) -> (A -> B) -> (A -> C) is
@@ -82,6 +50,6 @@ compose [int] [int] [int] increment increment 3
 
 ;;
 
-# let fxx = fun f1(x): (forall A:*. A -> A) -> (forall B:*. B -> B) is x [forall C:*. C -> C] x
-# ;;
-# fxx [forall A:*. A -> A] id
+let fxx = fun f1(x): (forall A:*. A -> A) -> (forall B:*. B -> B) is x [forall C:*. C -> C] x
+;;
+fxx id

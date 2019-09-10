@@ -31,7 +31,6 @@ rule token = parse
   | "or"            { OR }
   | "then"          { THEN }
   | "true"          { TRUE }
-  | "type"          { TYPEDECL }
   | "forall"        { FORALL }
   | ";;"            { SEMICOLON2 }
   | '('             { LPAREN }

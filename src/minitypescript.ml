@@ -21,12 +21,6 @@ module MiniTypeScript = Zoo.Main(struct
         let v = Eval.eval env e in
         Zoo.print_info "val %s : %s = %s@." x (Syntax.string_of_type ty) (Syntax.string_of_value v) ;
         ((x,ty) :: ctx, (x,v) :: env)
-    | Syntax.TypeDecl (x, ty_expr) ->
-       let ty_concrete = Type_check.substitute_aliases_maybe ctx ty_expr in
-        Zoo.print_info "typedecl %s : %s@." x (Syntax.string_of_type ty_concrete) ;
-        assert (Type_check.has_no_aliases ty_concrete);
-        ((x,ty_concrete) :: ctx, env)
-
 end) ;;
 
 MiniTypeScript.main ()

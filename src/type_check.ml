@@ -46,10 +46,8 @@ let rec type_of ctx = function
   | Fun (f, x, ty, e) ->
      (match ty with
       | TArrow (ty1, ty2) ->
-         let ty1_concrete = make_alias_param (substitute_aliases_maybe ctx ty1) in
-         let ty2_concrete = make_alias_param (substitute_aliases_maybe ctx ty2) in
-         check ((f, TArrow(ty1_concrete,ty2_concrete)) :: (x, ty1_concrete) :: ctx) e ty2_concrete ;
-         TArrow (ty1_concrete, ty2_concrete)
+         check ((f, TArrow(ty1,ty2)) :: (x, ty1) :: ctx) e ty2 ;
+         TArrow (ty1, ty2)
       | _ -> type_error ("expected function type but got " ^ string_of_type ty))
   | TFun (name, kind, e) -> TForAll (name, kind, type_of ctx e)
   | Closure _ -> assert false
@@ -93,82 +91,11 @@ and subtype ty1 ty2 =
        | _, _ -> false
     )
 
-(** [substitute_aliases_maybe ctx ty] returns [ty] with type aliases replaced by
-   their definitions from [ctx], if available. *)
-and substitute_aliases_maybe ctx ty =
-  match ty with
-  | TInt | TBool | TParam _ -> ty
-  | TAlias name -> (try List.assoc name ctx with Not_found -> ty)
-  | TArrow (ty_in, ty_out) -> TArrow (substitute_aliases_maybe ctx ty_in, substitute_aliases_maybe ctx ty_out)
-  | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, substitute_aliases_maybe ctx ty')) tss)
-  | TForAll (name, kind, ty) -> TForAll (name, kind, substitute_aliases_maybe ctx ty)
-
-(** [has_no_aliases ty] returns true iff there are no type aliases within [ty]. *)
-and has_no_aliases ty =
-  match ty with
-  | TInt | TBool | TParam _ -> true
-  | TAlias _ -> false
-  | TArrow (ty_in, ty_out) -> has_no_aliases ty_in && has_no_aliases ty_out
-  | TRecord tss -> List.for_all (fun (l, ty') -> has_no_aliases ty') tss
-  | TForAll (name, kind, ty) -> has_no_aliases ty
-
-(** [has_no_parameters ty] returns true iff there are no type parameters within [ty]. *)
-and has_no_parameters ty =
-  match ty with
-  | TInt | TBool | TAlias _ -> true
-  | TParam _ -> false
-  | TArrow (ty_in, ty_out) -> has_no_parameters ty_in && has_no_parameters ty_out
-  | TRecord tss -> List.for_all (fun (l, ty') -> has_no_parameters ty') tss
-  | TForAll (name, kind, ty) -> type_error "TODO: remove this function has_no_parameters"
-
-(** [make_alias_param ty] returns [ty] with type aliases turned into type
-   parameters. *)
-and make_alias_param ty =
-  match ty with
-  | TInt | TBool | TParam _ -> ty
-  | TAlias name -> TParam name
-  | TArrow (ty_in, ty_out) -> TArrow (make_alias_param ty_in, make_alias_param ty_out)
-  | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, make_alias_param ty')) tss)
-  | TForAll (name, kind, ty) -> TForAll (name, kind, make_alias_param ty)
-
-(** [param_constraints ty ty_sub] returns the type-parameter constraints
-   needed to unify [ty] and [ty_sub]. All we know is that ty_sub has to be a
-   subtype of ty. *)
-and param_constraints ty ty_sub =
-  if has_no_parameters ty && has_no_parameters ty_sub then []
-  else
-    match ty, ty_sub with
-    | TParam p, TInt -> [(p, TInt)]
-    | TParam p, TBool -> [(p, TBool)]
-    | TParam p, TAlias _ -> type_error "alias should not get here"
-    | TParam p, TParam p' when p = p' -> []
-    | TParam p, TParam p' -> type_error ("cannot unify different type parameters " ^ p ^ " and " ^ p')
-    | TParam p, TArrow (ty_in, ty_out) -> [(p, ty_sub)]
-    | TParam p, TRecord xs -> [(p, ty_sub)]
-    | _, TParam _ -> param_constraints ty_sub ty
-    | TRecord xs, TRecord ys -> List.concat (List.map (fun (l1, ty1) -> param_constraints ty1 (lookup_type l1 ys)) xs)
-    | TArrow (ty_in1, ty_out1), TArrow (ty_in2, ty_out2) -> (param_constraints ty_in2 ty_in1) @ (param_constraints ty_out1 ty_out2)
-    | _, _ -> type_error ("cannot unify " ^ string_of_type ty ^ " and " ^ string_of_type ty_sub)
-
-(** [unify_constraints xs] returns the substitutions necessary (including those in [acc]) to unify the constraints (p, ty); ... in [xs]. *)
-and unify_constraints acc xs = match xs with
-  | [] -> acc
-  | (p, ty)::xs' ->
-     let ty_final =
-       (try let ty_prev = List.assoc p acc in
-         if subtype ty_prev ty
-         then ty
-         else if subtype ty ty_prev then
-           ty_prev
-         else type_error ("cannot unify the constraints that type parameter " ^ p ^ " : " ^ string_of_type ty ^ " and " ^ p ^ " : " ^ string_of_type ty_prev)
-       with Not_found -> ty) in
-     unify_constraints ((p, ty_final)::acc) xs'
-
 (** [substitute_params_maybe ctx ty] returns [ty] with type parameters replaced by
    their definitions from [ctx], if available. *)
 and substitute_params_maybe ctx ty =
   match ty with
-  | TInt | TBool | TAlias _ -> ty
+  | TInt | TBool -> ty
   | TParam name -> (try List.assoc name ctx with Not_found -> ty)
   | TArrow (ty_in, ty_out) -> TArrow (substitute_params_maybe ctx ty_in, substitute_params_maybe ctx ty_out)
   | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, substitute_params_maybe ctx ty')) tss)
