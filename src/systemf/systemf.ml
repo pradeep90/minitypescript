@@ -1,5 +1,5 @@
-module MiniTypeScript = Zoo.Main(struct
-  let name = "minitypescript"
+module SystemF = Zoo.Main(struct
+  let name = "systemf"
   type command = Syntax.toplevel_cmd
   type environment = (string * Syntax.ty) list * Syntax.environment
   let options = []
@@ -23,4 +23,4 @@ module MiniTypeScript = Zoo.Main(struct
         ((x,ty) :: ctx, (x,v) :: env)
 end) ;;
 
-MiniTypeScript.main ()
+SystemF.main ()

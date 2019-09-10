@@ -8,26 +8,37 @@ SRCDIR = src
 TESTDIR = test
 
 default:
-	@echo "To compile MiniTypeScript, run:                 make all"
+	@echo "To compile all languages run:                 make all"
+	@echo "To compile a single language <lang> run:      make <lang>"
+	@echo "To compile bytecode add BUILD=byte:           make BUILD=byte ..."
+	@echo "Available languages:"
+	@echo "$(sort $(LANGS))"
 
-all: minitypescript
+LANGS = $(shell find src -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
 
-.PHONY: minitypescript
-minitypescript:
-	$(OCAMLBUILD) -use-menhir -menhir "menhir --explain" -libs unix -I $(SRCDIR) $(SRCDIR)/minitypescript.$(BUILD)
+all: $(LANGS)
+
+$(LANGS): % :
+	$(OCAMLBUILD) -use-menhir -menhir "menhir --explain" -libs unix -I $(SRCDIR) src/$@/$@.$(BUILD)
 
 .PHONY: repl
 repl:
 	ocaml -I _build/src
 
 .PHONY: test
-test:
-	ocamlbuild -pkgs oUnit -I $(SRCDIR) $(TESTDIR)/eval_test.$(BUILD) $(TESTDIR)/type_check_test.$(BUILD)
+test: test_systemf
+
+.PHONY: test_systemf
+test_systemf:
+	$(OCAMLBUILD) -pkgs oUnit -I $(SRCDIR) -I $(SRCDIR)/systemf $(TESTDIR)/systemf/eval_test.$(BUILD) $(TESTDIR)/systemf/type_check_test.$(BUILD)
 	./eval_test.native
 	./type_check_test.native
 
-example: all
-	./minitypescript.native $(SRCDIR)/example.minits
+example: all example_systemf
+
+.PHONY: example_systemf
+example_systemf:
+	./systemf.native $(SRCDIR)/systemf/example.systemf
 
 clean:
 	$(OCAMLBUILD) -clean

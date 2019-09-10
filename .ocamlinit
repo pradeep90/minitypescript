@@ -1,2 +1,3 @@
-#use "eval.ml";;
-#use "type_check.ml";;
+#use "systemf/syntax.ml";;
+#use "systemf/eval.ml";;
+#use "systemf/type_check.ml";;
