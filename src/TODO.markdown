@@ -210,6 +210,32 @@ How would you handle arbitrary, nameless union types, like `int | bool`? The use
 
 What about an extended type like `Foo = A | B` and then `Bar = Foo | C`? Typechecking would remain the same. Dispatch would be the same once you have the right deconstructor. The matter is now of inserting the right constructor when going from `B` to `(A | B) | C`. Now, the inserted wrapper would need to be of the type `((A|B) -> b) -> (C -> b) -> b`. The inner type `(A|B) -> b` would expand to the expected `(A -> b) -> (B -> b) -> b`. Finally, the type-match syntax would be `match x with (A|B) -> (match x with | A -> ... | B -> ...) | C -> ...`.
 
+## Church encoding of Intersection Types
+
+Question: What would be the drawback of carrying around the type at runtime? I guess a type match within a long loop would kill you. No. I'm carrying around the type too, it's just hidden as a function with continuations as arguments.
+
+What about `foo: {x: int, y: int} | {x: int, z: int}` followed by `foo.x`? No need to type match or deconstruct; you can typecheck that the projection is valid. But the value is wrapped, so you have to unwrap it. Ah. You just send the same continuation to both types!
+
+What if you wanted a function with conditional types, one that treated `(int | bool) -> (int | bool)` as `(int -> int) | (bool -> bool)`? You can't define it using the ordinary function definition. You would just expect a parameter with the type as the union of two functions. And, as usual, you would insert a wrapper whenever going from `int -> int` to `(int -> int) | (bool -> bool)`. Could you then typecheck `f 3` to be `int`?
+
+Wait a minute. `function process<T extends string | null>(text: T): T extends string ? string : null {}` is actually `(string -> string) & (null -> null)`. It's an intersection type, not a union type.
+
+Let's figure out intersection types, now that they seem key to GADTs. Say you have `int & bool`. How to represent that? It's probably just `(int -> bool -> b) -> b`. To project out the `int`, i.e., to get `(int -> bool -> int) -> int`, you would just pass in `const`.
+
+If `x` in `f x` is an intersection type, then there's no real problem because `A & B` is a subtype of `A`.
+
+What is the type of `((int -> Foo) & (bool -> Bar)) (int | bool)`? It's `Foo | Bar`. But how will you get that? Our `int | bool` is actually `(int -> b) -> (bool -> b) -> b`. We need to replace `b` with `Foo | Bar` (or rather `(Foo -> c) -> (Bar -> c) -> c`). We already have `int -> Foo`, so we wrap the result with `FooToFooOrBar` to get `int -> Foo | Bar` and likewise with `bool -> Bar`.
+
+If `f` in `f x` is an intersection type `(A -> C) & (B -> D)` and `x` is of type `A`, then we should wrap `x` to make it be of type `A | B`. This is for the evaluation. The typechecker should infer that the output will be of type `C`. If `f` is of the type `(int -> int -> int) & (int -> bool -> bool)`, then you should probably infer that the output will be of type `(int -> int) & (bool -> bool)`.
+
+Basically, when you have a function with an intersection type, you should merge the types to get a union input type like `A | B`. Then, you should wrap the input type if needed to get it to the type `A | B`.
+
+What if you have a function of type `(A -> C) & B`? Then, merging the types should give you just `A -> C`. And, as usual, `A & B` is not a function type.
+
+What if you have a function of type `(A -> C) & (B -> D) & (A -> E)`? I guess you get `(A -> (C & E)) & (B -> D)`.
+
+How would you create a value of type `A & B`? Probably using `product x y`, where `product = \A:*. \B:*. \x:A. \y:B. (\f: forall C: *. A -> B -> C. f x y)`.
+
 # System F-omega
 
 Don't know if I need this.
