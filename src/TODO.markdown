@@ -200,6 +200,16 @@ I guess I'm currently *inferring* the types. That's why I had to write a `unify`
 
 Polymorphic types should be represented as `forall` so that you can instantiate them. For a normal parameter, the argument type has to imply the parameter type. But for a type parameter, it just instantiates the parameter. For multiple matches in a function type, look for subtype relations. A failure would be A -> a being a super type of x,y -> x. Int <= X <= int, means x is int.
 
+## Church encoding of Discriminated Unions and Union Types
+
+ADTs can be the same way too - you dispatch on the deconstructor - it's either `a -> b` for `Just` or `b` for `Nothing`. Can we avoid the runtime type information? Well, you either have to carry it as a deconstructor or as an explicit type.
+
+How to deal with the names? Would that just be syntactic sugar for defining the name of the constructor? Let's say we can handle that.
+
+How would you handle arbitrary, nameless union types, like `int | bool`? The user won't wrap it up in the appropriate deconstructor, which would be `(int -> b) -> (bool -> b) -> b`. Even if you inserted a wrapper so that you got `x: (int | bool) = IntOrBool (y: int)`, how would you make `IntOrBool` return the correct deconstructor? I guess you would need to insert it with the knowledge of the type. Either the type is known or it is unknown, in which case its type would already be `int | bool` and it would already be wrapped.
+
+What about an extended type like `Foo = A | B` and then `Bar = Foo | C`? Typechecking would remain the same. Dispatch would be the same once you have the right deconstructor. The matter is now of inserting the right constructor when going from `B` to `(A | B) | C`. Now, the inserted wrapper would need to be of the type `((A|B) -> b) -> (C -> b) -> b`. The inner type `(A|B) -> b` would expand to the expected `(A -> b) -> (B -> b) -> b`. Finally, the type-match syntax would be `match x with (A|B) -> (match x with | A -> ... | B -> ...) | C -> ...`.
+
 # System F-omega
 
 Don't know if I need this.
@@ -507,7 +517,7 @@ EAdd [Nat] (EI [Nat] 1) (EB [Nat] true) [Nat] (id [Nat]) (\x:Bool. 3) plus
 => \s z.s(s(s(s z)))
 ```
 
-In general, we don't need to worry about the case where we get `EAdd [Nat] (EI [Nat] 1) (EB [Nat] true)` because `EB [Nat] true` has the type `(Nat -> Nat) -> (Bool -> Nat) -> (Nat -> Nat -> Nat) -> Nat`, which requires us to come up with `Bool -> Nat` or more generally `a -> Nat`, which people can't provide and thus we don't need to worry about.
+In general, we don't need to worry about the case where we get `EAdd [Nat] (EI [Nat] 1) (EB [Nat] true)` because `EB [Nat] true [Nat]` has the type `(Nat -> Nat) -> (Bool -> Nat) -> (Nat -> Nat -> Nat) -> Nat`, which requires us to come up with `Bool -> Nat` or more generally `a -> Nat`, which people can't provide and thus we don't need to worry about.
 
 If we try to pass in the wrong value for the Bool branch, we of course get a type error:
 
