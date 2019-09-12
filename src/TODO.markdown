@@ -210,6 +210,8 @@ How would you handle arbitrary, nameless union types, like `int | bool`? The use
 
 What about an extended type like `Foo = A | B` and then `Bar = Foo | C`? Typechecking would remain the same. Dispatch would be the same once you have the right deconstructor. The matter is now of inserting the right constructor when going from `B` to `(A | B) | C`. Now, the inserted wrapper would need to be of the type `((A|B) -> b) -> (C -> b) -> b`. The inner type `(A|B) -> b` would expand to the expected `(A -> b) -> (B -> b) -> b`. Finally, the type-match syntax would be `match x with (A|B) -> (match x with | A -> ... | B -> ...) | C -> ...`.
 
+What about a union of function types, such as `A -> C | B -> D`? You can't say much over there. But if you had `A -> C | B -> C`, then you would be able to infer that the return type is C. The merged function type would be `(A|B) -> C`.
+
 ## Church encoding of Intersection Types
 
 Question: What would be the drawback of carrying around the type at runtime? I guess a type match within a long loop would kill you. No. I'm carrying around the type too, it's just hidden as a function with continuations as arguments.
