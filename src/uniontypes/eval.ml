@@ -74,3 +74,10 @@ let rec eval env = function
       (match eval env e with
 	   Record vs -> eval env (snd (List.find (fun (l',_) -> l = l') vs))
 	 | _ -> runtime_error "record expected")
+  | Left (ty1, ty2, e) -> Left (ty1, ty2, eval env e)
+  | Right (ty1, ty2, e) -> Right (ty1, ty2, eval env e)
+  | Match (e, _, n1, e1, _, n2, e2) ->
+     (match eval env e with
+      | Left (_, _, e') -> eval ((n1, e')::env) e1
+      | Right (_, _, e') -> eval ((n2, e')::env) e2
+      | _ -> runtime_error "expected Left or Right as argument to match")

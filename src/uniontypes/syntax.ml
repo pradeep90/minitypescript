@@ -18,6 +18,7 @@ type ty =
   | TRecord of (label * ty) list (** records [{l1:ty1, ..., lN:tyN}] *)
   | TParam of name (** type parameter like in [Container A] *)
   | TForAll of name * kind * ty (** parametric polymorphism [forall A: * . A -> A] *)
+  | TUnion of ty * ty (** union type [ty1 | ty2] *)
 
 (** Expressions *)
 type expr =
@@ -42,6 +43,11 @@ type expr =
   | TApp of expr * ty (** type application [e [A]] *)
   | Record of (label * expr) list (** record [{l1=e1, ..., lN=eN}] *)
   | Project of expr * label (** field projection [e.l] *)
+  | Left of ty * ty * expr (** Left part of a union type [Left [int] [bool] 3] *)
+  | Right of ty * ty * expr (** Right part of a union type [Right [int] [bool] true] *)
+  | Match of expr * ty * name * expr * ty * name * expr
+(** Pattern-match on union type [match (f x) with | int as y -> y + 1 | bool
+   as y -> not y] *)
 
 (** An environment is an associative list [(x1,v1);...;(xN,vN)]. *)
 and environment = (name * expr) list
@@ -70,6 +76,7 @@ let string_of_type ty =
 	| TArrow (ty1, ty2) -> (1, (to_str 1 ty1) ^ " -> " ^ (to_str 0 ty2))
         | TParam name -> (4, name)
         | TForAll (name, kind, ty) -> (4, "(forall " ^ name ^ ": " ^ string_of_kind kind ^ ". " ^ to_str 0 ty ^ ")")
+        | TUnion (ty1, ty2) -> (4, Printf.sprintf "%s | %s" (to_str 0 ty1) (to_str 0 ty2))
     in
       if m > n then str else "(" ^ str ^ ")"
   in
@@ -84,4 +91,6 @@ let rec string_of_value = function
 	(List.map (fun (l,e) -> l ^ " = " ^ (string_of_value e)) rs) ^
 	"}"
   | Closure _ -> "<fun>"
+  | Left (_, _, x) -> "Left " ^ (string_of_value x)
+  | Right (_, _, x) -> "Right " ^ (string_of_value x)
   | _ -> assert false

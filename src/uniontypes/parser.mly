@@ -18,6 +18,7 @@
 %token SEMICOLON2
 %token EOF
 %token LAMBDASLASH FORALL LSQUARE RSQUARE
+%token LEFT RIGHT MATCH PIPE WITH AS
 
 %start toplevel
 %start file
@@ -68,6 +69,9 @@ expr:
   | IF expr THEN expr ELSE expr	       { If ($2, $4, $6) }
   | FUN VAR LPAREN VAR RPAREN COLON ty IS expr { Fun ($2, $4, $7, $9) }
   | LAMBDASLASH VAR COLON kind PERIOD expr { TFun ($2, $4, $6) }
+  | LEFT LSQUARE ty RSQUARE LSQUARE ty RSQUARE expr { Left ($3, $6, $8) }
+  | RIGHT LSQUARE ty RSQUARE LSQUARE ty RSQUARE expr { Right ($3, $6, $8) }
+  | MATCH expr WITH PIPE ty AS VAR TARROW expr PIPE ty AS VAR TARROW expr { Match ($2, $5, $7, $9, $11, $13, $15) }
 
 app:
     app non_app         { App ($1, $2) }
@@ -118,6 +122,7 @@ ty:
   | FORALL VAR COLON kind PERIOD ty     { TForAll ($2, $4, $6) }
   | LBRACE RBRACE                       { TRecord [] }
   | LBRACE trecord_list RBRACE          { TRecord $2 }
+  | ty PIPE ty                          { TUnion ($1, $3) }
   | LPAREN ty RPAREN                    { $2 }
 
 trecord_list:

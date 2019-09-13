@@ -70,6 +70,16 @@ let rec type_of ctx = function
 	     (try List.assoc l ts with
 		  Not_found -> type_error ("no such field " ^ l))
 	 | _ -> type_error "record expected" )
+  | Left (ty1, ty2, e) -> check ctx e ty1; TUnion (ty1, ty2)
+  | Right (ty1, ty2, e) -> check ctx e ty2; TUnion (ty1, ty2)
+  | Match (e, ty1, n1, e1, ty2, n2, e2) ->
+     check ctx e (TUnion (ty1, ty2));
+     let ty_left = type_of ((n1, ty1)::ctx) e1
+     and ty_right = type_of ((n2, ty2)::ctx) e2
+     in
+     if subtype ty_left ty_right then ty_right
+     else if subtype ty_right ty_left then ty_left
+     else type_error (Printf.sprintf "incompatible types in match %s and %s" (string_of_type ty_left) (string_of_type ty_right))
 
 (** [check ctx e ty] checks whether [e] can be given type [ty] in
     context [ctx]. *)
@@ -88,6 +98,8 @@ and subtype ty1 ty2 =
 	     ts2
        | TForAll (n1, k1, ty1), TForAll (n2, k2, ty2) ->
           subtype (substitute_params_maybe [(n1, TParam n2)] ty1) ty2
+       | TUnion (ty1, ty2), TUnion (ty1', ty2') ->
+          (subtype ty1 ty1') && (subtype ty2 ty2')
        | _, _ -> false
     )
 
@@ -101,3 +113,4 @@ and substitute_params_maybe ctx ty =
   | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, substitute_params_maybe ctx ty')) tss)
   | TForAll (name, kind, ty) ->
      TForAll (name, kind, substitute_params_maybe ((name, TParam name)::ctx) ty)
+  | TUnion (ty1, ty2) -> TUnion (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
