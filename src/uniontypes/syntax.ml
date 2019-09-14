@@ -37,7 +37,7 @@ type expr =
   | If of expr * expr * expr (** conditional [if e1 then e2 else e3] *)
   | Fun of name * name * ty * expr (** recursive function [fun f(x : ty1):ty2 is e] *)
   | TFun of name * kind * expr (** type abstraction [\A:K. e] *)
-  | Closure of environment * name * expr (** closure (internal value) *)
+  | Closure of environment * name * expr * ty (** closure (internal value) *)
   | Let of name * expr * expr (** local definition [let x = e1 in e2] *)
   | App of expr * expr (** application [e1 e2] *)
   | TApp of expr * ty (** type application [e [A]] *)
@@ -93,4 +93,13 @@ let rec string_of_value = function
   | Closure _ -> "<fun>"
   | Left (_, _, x) -> "Left " ^ (string_of_value x)
   | Right (_, _, x) -> "Right " ^ (string_of_value x)
+  | _ -> assert false
+
+let rec is_value = function
+  | Int _ -> true
+  | Bool _ -> true
+  | Record rs -> List.for_all (fun (_,e) -> is_value e) rs
+  | Closure _ -> true
+  | Left (_, _, x) -> is_value x
+  | Right (_, _, x) -> is_value x
   | _ -> assert false

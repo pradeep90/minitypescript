@@ -202,6 +202,8 @@ Polymorphic types should be represented as `forall` so that you can instantiate 
 
 ## Church encoding of Discriminated Unions and Union Types
 
+(Edit: Never mind. I just used `Left` and `Right`.)
+
 ADTs can be the same way too - you dispatch on the deconstructor - it's either `a -> b` for `Just` or `b` for `Nothing`. Can we avoid the runtime type information? Well, you either have to carry it as a deconstructor or as an explicit type.
 
 How to deal with the names? Would that just be syntactic sugar for defining the name of the constructor? Let's say we can handle that.
@@ -237,6 +239,12 @@ What if you have a function of type `(A -> C) & B`? Then, merging the types shou
 What if you have a function of type `(A -> C) & (B -> D) & (A -> E)`? I guess you get `(A -> (C & E)) & (B -> D)`.
 
 How would you create a value of type `A & B`? Probably using `product x y`, where `product = \A:*. \B:*. \x:A. \y:B. (\f: forall C: *. A -> B -> C. f x y)`.
+
+## Passing a Plain Type to a Union Type
+
+I need to handle `(f: (int | bool) -> int) 3`. The inference is simple enough if you assume that `int` is a subtype of `int | bool`. The evaluation can just check whether the input to `match` is directly of the raw type for each branch.
+
+I could pass the test by checking the type of the value at runtime. It's either a primitive or a record or a closure. When creating a closure, I store the type of the function inside it. Still, computing the type of a record could take a while at runtime. I could have avoided that by modifying the AST to cast `A` to `A|B` when I see `(f: (A|B) -> C) (x:A)`.
 
 # System F-omega
 
@@ -1100,6 +1108,8 @@ function area(s: Shape) {
 # Functional Programming Feature Wish List
 
 + Union type: `pet: Bird | Fish` - allow `pet.numEggs()` but not `pet.numFins()`.
+
++ Make primitive types also be records.
 
 + Generic type with syntax.
 

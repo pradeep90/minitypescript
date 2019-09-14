@@ -72,10 +72,11 @@ let test_fixture = "eval" >:::
     let closure = (eval [("yo", Int 7)] (Fun ("f", "x", TArrow (TInt, TInt), Var "x")))
     in
     match closure with
-    | Closure (env, param, body) ->
+    | Closure (env, param, body, ty) ->
        assert_equal "x" param;
        assert_equal (Var "x") body;
        assert_equal (Int 7) (List.assoc "yo" env);
+       assert_equal ty (TArrow (TInt, TInt));
        assert_equal true (closure == (List.assoc "f" env)) ~msg:"function name should point to the closure";
     | _ -> runtime_error "wrong output"
   );
@@ -85,7 +86,7 @@ let test_fixture = "eval" >:::
   );
 
   "closure" >:: (fun () ->
-    let rec closure = Closure ([("f", closure)], "x", Var "x")
+    let rec closure = Closure ([("f", closure)], "x", Var "x", TArrow (TInt, TInt))
     in
     assert_equal true (closure == eval [] closure);
   );

@@ -50,7 +50,7 @@ let rec type_of ctx = function
          TArrow (ty1, ty2)
       | _ -> type_error ("expected function type but got " ^ string_of_type ty))
   | TFun (name, kind, e) -> TForAll (name, kind, type_of ctx e)
-  | Closure _ -> assert false
+  | Closure (_, _, _, ty) -> ty
   | Let (x, e1, e2) -> type_of ((x, type_of ctx e1)::ctx) e2
   | App (e1, e2) ->
      (match type_of ctx e1 with
@@ -86,7 +86,7 @@ let rec type_of ctx = function
 and check ctx e ty =
   if not (subtype (type_of ctx e) ty) then type_error ("incompatible types; " ^ (string_of_type (type_of ctx e)) ^ " is not a subtype of " ^ (string_of_type ty))
 
-(** [sybtype ty1 ty2] returns [true] if [ty1] is a subtype of [ty2]. *)
+(** [subtype ty1 ty2] returns [true] if [ty1] is a subtype of [ty2]. *)
 and subtype ty1 ty2 =
   (ty1 = ty2) ||
     (match ty1, ty2 with
@@ -100,6 +100,8 @@ and subtype ty1 ty2 =
           subtype (substitute_params_maybe [(n1, TParam n2)] ty1) ty2
        | TUnion (ty1, ty2), TUnion (ty1', ty2') ->
           (subtype ty1 ty1') && (subtype ty2 ty2')
+       | ty1, TUnion (ty1', ty2') ->
+          (subtype ty1 ty1') || (subtype ty1 ty2')
        | _, _ -> false
     )
 

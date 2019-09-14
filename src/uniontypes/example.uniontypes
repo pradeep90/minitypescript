@@ -69,32 +69,33 @@ let y = Right [int] [bool] true in foo y;;
 
 let test_evaluation_of_left = let baz = 8 in let z = Left [int] [bool] (baz + 1) in let baz = 3 in match z with | int as z1 -> z1 | bool as z2 -> 0;;
 
-# Simple union type.
-let bar = fun f(x): int -> (bool | int) -> int is
-    fun g(method): (bool | int) -> int is
-    	match method with
-	| bool as y -> 7
-	| int as y -> (x * y)
-;;
-
 let increaseNumber = fun f(x): int -> ({add: int, multiply: int} | int) -> int is
     fun g(method): ({add: int, multiply: int} | int) -> int is
     	match method with
 	| {add: int, multiply: int} as method -> (x + method.add) * method.multiply
-	| int as method -> (x * method)
+	| int as method -> (x + method)
 ;;
 
 increaseNumber 7 (Left [{add: int, multiply: int}] [int] {add: 4, multiply: 10});;
 increaseNumber 7 (Right [{add: int, multiply: int}] [int] 8);;
 
-# TODO: Allow plain type arguments.
-# let z = foo 3;;
+let z = foo 3;;
+let z = foo true;;
+let z = increaseNumber 10 3;;
+let z = increaseNumber 10 {add: 1, multiply: 9};;
 
-# # Only common attributes are fine.
-# let canLayEgg = fun f(animal): {wingSpan: int, canLayEgg: bool} | {finLength: int, canLayEgg: bool} -> bool is
-#     animal.canLayEgg
+let applyUnionFn = fun f1(f): ((int -> int) | (bool -> int)) -> int is
+    match f with
+    | (int -> int) as g -> (g 2)
+    | (bool -> int) as h -> (h true)
+;;
 
-# # Error: animal.wingSpan
+let boolToInt = fun f(x): bool -> int is if x then 1 else 0;;
+
+applyUnionFn (Left [int -> int] [bool -> int] increment);;
+applyUnionFn (Right [int -> int] [bool -> int] boolToInt);;
+applyUnionFn increment;;
+applyUnionFn boolToInt;;
 
 # # GADT.
 # # TODO:
@@ -111,6 +112,12 @@ increaseNumber 7 (Right [{add: int, multiply: int}] [int] 8);;
 # # Should be (int | bool).
 # g true
 # g 7
+
+# # Only common attributes are fine.
+# let canLayEgg = fun f(animal): {wingSpan: int, canLayEgg: bool} | {finLength: int, canLayEgg: bool} -> bool is
+#     animal.canLayEgg
+
+# # Error: animal.wingSpan
 
 # # TODO: ADT.
 

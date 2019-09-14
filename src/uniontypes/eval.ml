@@ -59,13 +59,13 @@ let rec eval env = function
 	 | Bool false -> eval env e3
 	 | _ -> runtime_error "boolean value expected in conditional")
   | Fun (f, x, ty, e) ->
-     let rec c = Closure ((f,c)::env, x, e) in c
+     let rec c = Closure ((f,c)::env, x, e, ty) in c
   | TFun (_, _, e) -> eval env e
   | Closure _ as e -> e
   | Let (x, e1, e2) -> eval ((x, eval env e1)::env) e2
   | App (e1, e2) ->
       (match eval env e1 with
-	   Closure (env', x, e) -> eval ((x,eval env e2)::env') e
+	   Closure (env', x, e, _) -> eval ((x,eval env e2)::env') e
 	 | _ -> runtime_error "invalid application")
   | TApp (e, _) -> eval env e
   | Record rs ->
@@ -76,8 +76,14 @@ let rec eval env = function
 	 | _ -> runtime_error "record expected")
   | Left (ty1, ty2, e) -> Left (ty1, ty2, eval env e)
   | Right (ty1, ty2, e) -> Right (ty1, ty2, eval env e)
-  | Match (e, _, n1, e1, _, n2, e2) ->
+  | Match (e, ty1, n1, e1, ty2, n2, e2) ->
      (match eval env e with
       | Left (_, _, e') -> eval ((n1, e')::env) e1
       | Right (_, _, e') -> eval ((n2, e')::env) e2
-      | _ -> runtime_error "expected Left or Right as argument to match")
+      | _ as e' when is_value e' ->
+         if Type_check.subtype (Type_check.type_of [] e') ty1
+         then eval ((n1, e')::env) e1
+         else if Type_check.subtype (Type_check.type_of [] e') ty2
+         then eval ((n2, e')::env) e2
+         else runtime_error "match got a value that was not a subtype of the union type; this should not have passed the typechecker"
+      | _ -> runtime_error "expected Left or Right or a subtype value as argument to match")
