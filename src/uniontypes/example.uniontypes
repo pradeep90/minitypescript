@@ -123,8 +123,9 @@ barFn true;;
 
 {fst: addThree, snd: increment} 7;;
 
-# # Typecheck recursively.
-# {fst: {fst: toggle, snd: toggle}, snd: {fst: toggle, snd: increment}} 7;;
+# Typecheck recursively.
+{fst: {fst: toggle, snd: toggle}, snd: {fst: toggle, snd: increment}} 7;;
+{fst: {fst: toggle, snd: toggle}, snd: {fst: toggle, snd: {fst: toggle, snd: increment}}} (Right [bool] [int] 7);;
 
 # # GADT.
 # # TODO:

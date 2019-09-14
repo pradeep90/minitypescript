@@ -76,7 +76,7 @@ let string_of_type ty =
 	| TArrow (ty1, ty2) -> (1, (to_str 1 ty1) ^ " -> " ^ (to_str 0 ty2))
         | TParam name -> (4, name)
         | TForAll (name, kind, ty) -> (4, "(forall " ^ name ^ ": " ^ string_of_kind kind ^ ". " ^ to_str 0 ty ^ ")")
-        | TUnion (ty1, ty2) -> (4, Printf.sprintf "%s | %s" (to_str 0 ty1) (to_str 0 ty2))
+        | TUnion (ty1, ty2) -> (4, Printf.sprintf "(%s | %s)" (to_str 0 ty1) (to_str 0 ty2))
     in
       if m > n then str else "(" ^ str ^ ")"
   in

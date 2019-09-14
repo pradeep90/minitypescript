@@ -55,9 +55,12 @@ let rec type_of ctx = function
   | App (e1, e2) ->
      (match type_of ctx e1 with
 	TArrow (ty1, ty2) -> check ctx e2 ty1; ty2
-      | TRecord [("fst", TArrow (in1, out1)); ("snd", TArrow (in2, out2))] ->
-         check ctx e2 (TUnion (in1, in2));
-         TUnion (out1, out2)
+      | TRecord [("fst", ty1); ("snd", ty2)] as ty ->
+         let in_union = function_type_union true ty
+         and out_union = function_type_union false ty
+         in
+         check ctx e2 in_union;
+         out_union
       | _ as ty -> type_error ("expected function but got " ^ string_of_type ty))
   | TApp (e1, ty_arg) ->
      (match type_of ctx e1 with
@@ -115,6 +118,13 @@ and is_valid_argument ty_arg ty_fn =
   | TRecord [("fst", ty_fst); ("snd", ty_snd)] ->
      is_valid_argument ty_arg ty_fst || is_valid_argument ty_arg ty_snd
   | _ -> type_error ("expected function or record of functions but got " ^ string_of_type ty_fn)
+
+(** [function_type_union ty1 ty2] for [(A -> B & C -> D) & E -> F] returns [((A|C)|E, (B|D)|F)]. *)
+and function_type_union choose_input_type ty =
+  match ty with
+  | TArrow (ty1, ty2) -> if choose_input_type then ty1 else ty2
+  | TRecord [("fst", ty_fst); ("snd", ty_snd)] -> TUnion (function_type_union choose_input_type ty_fst, function_type_union choose_input_type ty_snd)
+  | _ -> type_error ("expected function or record of functions but got " ^ string_of_type ty)
 
 (** [substitute_params_maybe ctx ty] returns [ty] with type parameters replaced by
    their definitions from [ctx], if available. *)
