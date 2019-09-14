@@ -56,6 +56,7 @@ rule token = parse
   | '['             { LSQUARE }
   | ']'             { RSQUARE }
   | '|'             { PIPE }
+  | '&'             { AMPERSAND }
   | var             { VAR (lexeme lexbuf) }
   | eof             { EOF }
 

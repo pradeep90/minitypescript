@@ -19,6 +19,7 @@
 %token EOF
 %token LAMBDASLASH FORALL LSQUARE RSQUARE
 %token LEFT RIGHT MATCH PIPE WITH AS
+%token AMPERSAND
 
 %start toplevel
 %start file
@@ -123,6 +124,7 @@ ty:
   | LBRACE RBRACE                       { TRecord [] }
   | LBRACE trecord_list RBRACE          { TRecord $2 }
   | ty PIPE ty                          { TUnion ($1, $3) }
+  | ty AMPERSAND ty                     { TRecord [("fst", $1); ("snd", $3)] }
   | LPAREN ty RPAREN                    { $2 }
 
 trecord_list:
