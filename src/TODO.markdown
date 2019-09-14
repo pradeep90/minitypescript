@@ -246,6 +246,42 @@ I need to handle `(f: (int | bool) -> int) 3`. The inference is simple enough if
 
 I could pass the test by checking the type of the value at runtime. It's either a primitive or a record or a closure. When creating a closure, I store the type of the function inside it. Still, computing the type of a record could take a while at runtime. I could have avoided that by modifying the AST to cast `A` to `A|B` when I see `(f: (A|B) -> C) (x:A)`.
 
+Do we need `Left` and `Right` at all? If all casts from `A` to `A|B` can be done implicitly, perhaps even at compile-time by modifying the AST, then only the compiler will see the `Left` and `Right` constructors.
+
+But what about a cast from `A | B` to `A | (B | C)`? The casting function would probably have to destructure `A | B` and then make it an `A | (B | C)`.
+
+## Intersection type
+
+We can probably move to a single record having fields of both records once all types are records. Till then, we have an explicit product record.
+
+Edit: Wrong ideas follow.
+
+I'm guessing that `(f: (A -> D) & (B -> E) & (A -> F)) (x: A)` would give you `D & never & F` and thus `D & F`.
+
+And an intersection should probably distribute over a union type: `(f: (A -> C) & (B -> D)) (x: A | B)` should give `((A -> C) & (B -> D) A) | ((A -> C) & (B -> D) B)` and thus `(C & nothing) | (nothing & D)` and finally `C | D`.
+
+What about `(f: (A -> C) | (B -> D)) (x: A & B)`? I'm guessing the intersection should still distribute over the union to give `C | D`.
+
+What about arbitrary sums and products on both sides? (Wow. Types make you think about the exhaustive variations.)
+
+I don't think you can do much if you have a union on both sides. Let's ignore this case for now.
+
+What if the types don't collapse as easily as above? Well, then the function application won't typecheck at all! Take `(f: (A -> C) & (D -> D)) (x: A | B)`. Now, after distributing, you have `C | nothing`. Hmm... I'm guessing `A | nothing` is `nothing`, whereas `A & nothing` is `A`. Seems a bit weird, since it seems like it should be the other way around: `x || false` should be `x` and `x && false` should be `false`. However, I think that "intersection" means the union of their properties and "union" means the intersection of their properties. `A & nothing` means that you have the properties from both `A` and `nothing`, which means just the properties from `A`. `A | nothing` means that you have only those properties that are common in both, which means that you get no properties at all. (Not sure about this.)
+
+What if you have an intersection on both sides? Take `(f: (A -> C) & (B -> D)) (x: A & B)`. I'm guessing it will be `C & D`.
+
+* * * * *
+
+Need something that will take an intersection of functions and one value and return those results that are feasible. So, `(f: (A -> D) & (B -> E) & (A -> F)) (x: A)` should return something of the type `D & F`. This function clearly depends on the type.
+
+So, the difficulty is not in the type inference. It's in the different evaluations based on the types. The shape of the return type depends on the relation between the function types and the argument types. Usually, it just depends on the function's return type; `(f: A -> B) (x: A)` gives a result of type `B`. Now, it seems like `(f: A -> B) (x: A & A)` should return `B & B`. But that doesn't seem right. Yes, `(A => B && A) => B`, but saying that `(A => B && A && A) => B && B` seems redundant.
+
+Let's keep the argument type simple. It's just a base type `A`. If the function has the intersection type `(A -> C) & (B -> D) & (A -> D)`, then it must return `C`, not `C & D`.
+
+How will it choose the right function, though? It has to do that based on the type of the input. I think the input has to be of the type `A | B | A`. That way, it can apply each function to each branch and return `C | D | D`.
+
+But... we want to refine the return type based on the input type! Basically, `(f: (A -> C) & (B -> D)) (x: A)` should be of type `C`, not `C | D`. I think we will need to insert a wrapper function to cast `A` to `A | B` and another function to cast `A | B` to `A`. Rather, we can simply extract that part of `f` that applies to `A`.
+
 # System F-omega
 
 Don't know if I need this.
@@ -1107,7 +1143,9 @@ function area(s: Shape) {
 
 # Functional Programming Feature Wish List
 
-+ Union type: `pet: Bird | Fish` - allow `pet.numEggs()` but not `pet.numFins()`.
++ Union type: `pet: Bird | Fish` - allow `pet.numEggs()` but not `pet.numFins()`. Maybe change the syntax for Left and Right to take [A | B] as argument.
+
++ Extensible rows.
 
 + Make primitive types also be records.
 

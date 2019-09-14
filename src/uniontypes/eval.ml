@@ -66,6 +66,28 @@ let rec eval env = function
   | App (e1, e2) ->
       (match eval env e1 with
 	   Closure (env', x, e, _) -> eval ((x,eval env e2)::env') e
+         | Record [("fst", ef1); ("snd", ef2)] ->
+            let ef1' = eval env ef1
+            and ef2' = eval env ef2
+            in
+            (* TODO: Merge this with the Match branch. *)
+            (match eval env e2 with
+             | Left (_, _, e') -> eval env (App (ef1', e'))
+             | Right (_, _, e') -> eval env (App (ef2', e'))
+             | _ as e' when is_value e' ->
+                let empty_ctx = []
+                in
+                let ty_arg = Type_check.type_of empty_ctx e'
+                and ty_ef1' = Type_check.type_of empty_ctx ef1'
+                and ty_ef2' = Type_check.type_of empty_ctx ef2'
+                in
+                if Type_check.is_valid_argument ty_arg ty_ef1'
+                then eval env (App (ef1', e'))
+                else if Type_check.is_valid_argument ty_arg ty_ef2'
+                then eval env (App (ef2', e'))
+                else
+                  runtime_error (Printf.sprintf "App got a value that was not a subtype of the union type; this should not have passed the typechecker - ty_arg: %s; ty_ef1': %s; ty_ef2': %s" (string_of_type ty_arg) (string_of_type ty_ef1') (string_of_type ty_ef2'))
+             | _ -> runtime_error "App expected Left or Right or a subtype value as argument")
 	 | _ -> runtime_error "invalid application")
   | TApp (e, _) -> eval env e
   | Record rs ->

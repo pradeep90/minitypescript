@@ -47,9 +47,9 @@ let compose = \A:*. \B:*. \C:*.
 	    	f (g x)
 ;;
 
-compose [int] [int] [int] increment increment 3
+let incrementByTwo = compose [int] [int] [int] increment increment;;
 
-;;
+incrementByTwo 3;;
 
 let fxx = fun f1(x): (forall A:*. A -> A) -> (forall B:*. B -> B) is x [forall C:*. C -> C] x
 ;;
@@ -96,6 +96,35 @@ applyUnionFn (Left [int -> int] [bool -> int] increment);;
 applyUnionFn (Right [int -> int] [bool -> int] boolToInt);;
 applyUnionFn increment;;
 applyUnionFn boolToInt;;
+
+# Intersection type.
+
+let foo = fun f(x): (int & bool) -> int is
+    x.fst
+;;
+
+let x = foo {fst: 3, snd: true};;
+
+let toggle = fun f(x): bool -> bool is
+    if x then false else true
+;;
+
+let barFn = {fst: increment, snd: boolToInt};;
+let bazFn = {fst: increment, snd: toggle};;
+
+let addThree = fun f(x): int -> int is x + 3;;
+barFn (Left [int] [bool] 7);;
+barFn (Right [int] [bool] true);;
+bazFn (Left [int] [bool] 7);;
+bazFn (Right [int] [bool] true);;
+
+barFn 7;;
+barFn true;;
+
+{fst: addThree, snd: increment} 7;;
+
+# # Typecheck recursively.
+# {fst: {fst: toggle, snd: toggle}, snd: {fst: toggle, snd: increment}} 7;;
 
 # # GADT.
 # # TODO:

@@ -55,6 +55,9 @@ let rec type_of ctx = function
   | App (e1, e2) ->
      (match type_of ctx e1 with
 	TArrow (ty1, ty2) -> check ctx e2 ty1; ty2
+      | TRecord [("fst", TArrow (in1, out1)); ("snd", TArrow (in2, out2))] ->
+         check ctx e2 (TUnion (in1, in2));
+         TUnion (out1, out2)
       | _ as ty -> type_error ("expected function but got " ^ string_of_type ty))
   | TApp (e1, ty_arg) ->
      (match type_of ctx e1 with
@@ -104,6 +107,14 @@ and subtype ty1 ty2 =
           (subtype ty1 ty1') || (subtype ty1 ty2')
        | _, _ -> false
     )
+
+(** [is_valid_argument ty_arg ty_fn] returns [true] if [ty_arg] has can be a valid input to [ty_fn]. *)
+and is_valid_argument ty_arg ty_fn =
+  match ty_fn with
+    TArrow (ty1, _) -> subtype ty_arg ty1
+  | TRecord [("fst", ty_fst); ("snd", ty_snd)] ->
+     is_valid_argument ty_arg ty_fst || is_valid_argument ty_arg ty_snd
+  | _ -> type_error ("expected function or record of functions but got " ^ string_of_type ty_fn)
 
 (** [substitute_params_maybe ctx ty] returns [ty] with type parameters replaced by
    their definitions from [ctx], if available. *)
