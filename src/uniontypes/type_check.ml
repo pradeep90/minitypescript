@@ -56,12 +56,17 @@ let rec type_of ctx = function
      (match type_of ctx e1 with
 	TArrow (ty1, ty2) -> check ctx e2 ty1; ty2
       | TRecord [("fst", ty1); ("snd", ty2)] as ty ->
-         let in_union = function_type_union true ty
-         and out_union = function_type_union false ty
+         let ty_arg = type_of ctx e2
          in
-         check ctx e2 in_union;
-         out_union
-      | _ as ty -> type_error ("expected function but got " ^ string_of_type ty))
+         (match ty_arg with
+          | TUnion _ ->
+             let in_union, out_union = function_type_union true ty, function_type_union false ty
+             in check ctx e2 in_union;
+                out_union
+          | _ -> (match matching_function_type ty_arg ty with
+                  | Some (TArrow (_, ty_out)) -> ty_out
+                  | _ -> type_error (Printf.sprintf "App: expected %s to be a subtype of an arrow type in %s" (string_of_type ty_arg) (string_of_type ty))))
+      | _ as ty -> type_error ("App: expected function but got " ^ string_of_type ty))
   | TApp (e1, ty_arg) ->
      (match type_of ctx e1 with
       | TForAll (name, _, ty) -> substitute_params_maybe ((name, ty_arg)::ctx) ty
@@ -125,6 +130,16 @@ and function_type_union choose_input_type ty =
   | TArrow (ty1, ty2) -> if choose_input_type then ty1 else ty2
   | TRecord [("fst", ty_fst); ("snd", ty_snd)] -> TUnion (function_type_union choose_input_type ty_fst, function_type_union choose_input_type ty_snd)
   | _ -> type_error ("expected function or record of functions but got " ^ string_of_type ty)
+
+(** [matching_function_type ty_arg ty] returns the function type in [ty] that matches [ty_arg] or None. *)
+and matching_function_type ty_arg ty =
+  match ty with
+  | TArrow (ty1, ty2) -> if subtype ty_arg ty1 then Some ty else None
+  | TRecord [("fst", ty_fst); ("snd", ty_snd)] ->
+     (match matching_function_type ty_arg ty_fst with
+     | Some _ as ty' -> ty'
+     | None -> matching_function_type ty_arg ty_snd)
+  | _ -> type_error ("matching_function_type expected function or record of functions but got " ^ string_of_type ty)
 
 (** [substitute_params_maybe ctx ty] returns [ty] with type parameters replaced by
    their definitions from [ctx], if available. *)

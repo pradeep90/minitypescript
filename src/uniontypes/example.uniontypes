@@ -117,6 +117,8 @@ barFn (Left [int] [bool] 7);;
 barFn (Right [int] [bool] true);;
 bazFn (Left [int] [bool] 7);;
 bazFn (Right [int] [bool] true);;
+# Error:
+# bazFn (Right [bool] [bool] true);;
 
 barFn 7;;
 barFn true;;
@@ -127,21 +129,25 @@ barFn true;;
 {fst: {fst: toggle, snd: toggle}, snd: {fst: toggle, snd: increment}} 7;;
 {fst: {fst: toggle, snd: toggle}, snd: {fst: toggle, snd: {fst: toggle, snd: increment}}} (Right [bool] [int] 7);;
 
-# # GADT.
-# # TODO:
-# let negate = fun f(g): ((int -> int) & (bool -> bool)) -> (int | bool) -> (int | bool) is
-#     typematch x with
-#     | int -> -x
-#     | bool -> not x
+# GADT.
+let negate = {fst: fun f(x): int -> int is 0-x, snd: toggle};;
 
-# negate true
-# negate 7
+negate true;;
+negate 7;;
 
-# fun g(x): (int | bool) -> (int | bool) is negate x
+negate (negate true);;
+toggle (negate true);;
+# Error:
+# addThree (negate true);;
 
-# # Should be (int | bool).
-# g true
-# g 7
+let g = fun g(x): (int | bool) -> (int | bool) is negate x
+;;
+
+# Should be (int | bool).
+g (Left [int] [bool] 7);;
+g (Right [int] [bool] true);;
+g 7;;
+g true;;
 
 # # Only common attributes are fine.
 # let canLayEgg = fun f(animal): {wingSpan: int, canLayEgg: bool} | {finLength: int, canLayEgg: bool} -> bool is
