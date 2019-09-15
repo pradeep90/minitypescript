@@ -97,7 +97,7 @@ let test_fixture = "type_check" >:::
   "app" >:: ( fun () ->
     assert_equal TInt (type_of [] (App (Fun ("f", "x", TArrow (TInt, TInt), Var "x"), Int 8)));
     assert_type_error (fun _ -> type_of [] (App (Fun ("f", "x", TArrow (TInt, TInt), Var "x"), Bool true))) "incompatible types; bool is not a subtype of int";
-    assert_type_error (fun _ -> type_of [] (App (Int 7, Bool true))) "expected function but got int";
+    assert_type_error (fun _ -> type_of [] (App (Int 7, Bool true))) "App: expected function but got int";
   );
 
   "app_parameterized_function" >:: ( fun () ->
