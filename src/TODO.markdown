@@ -282,6 +282,24 @@ How will it choose the right function, though? It has to do that based on the ty
 
 But... we want to refine the return type based on the input type! Basically, `(f: (A -> C) & (B -> D)) (x: A)` should be of type `C`, not `C | D`. I think we will need to insert a wrapper function to cast `A` to `A | B` and another function to cast `A | B` to `A`. Rather, we can simply extract that part of `f` that applies to `A`.
 
+## Mapped Types and Distributive Conditional Types
+
+To say that something has the type `Lion | Tiger`, you need to show that it is a subtype of either `Lion` or `Tiger`. Something that removes the `hasTail` property would make it no longer a `Lion`.
+
+I guess a type predicate (or conditional type) adds the constraint that `Zebra` is not a subtype of `ExtractCat<Animal> = A extends { meow(): void } ? A : never`.
+
+So, I need to extend the subtype relation. For example, right now, ty1 is a subtype of `TUnion (ty1', ty2')` if `(subtype ty1 ty1') || (subtype ty1 ty2')`. Now, we'll add that it is a subtype of `TPredicate (p, TUnion (ty1', ty2'))` if `(p ty1' && subtype ty1 ty1') || (p ty2' && subtype ty1 ty2')`.
+
+Maybe it's actually a type transformer, so the subtype relation should be: `ty1` is a subtype of `TMapping (p, TUnion (ty1', ty2'))` if `(subtype ty1 (p ty1')) || (subtype ty1 (p ty2'))`. So, `ExtractCat<Animal>` would be the mapping `if ty2 has meow then ty2 else never`. And nothing is a subtype of `never`.
+
+A type mapping like this:
+
+```typescript
+type ExcludeTypeField<A> = { [K in ExcludeTypeKey<keyof A>]: A[K] }
+```
+
+would be `List.map (fun k -> (k, lookup_type k ty)) (excludeTypeKey (keys ty))`.
+
 # System F-omega
 
 Don't know if I need this.
