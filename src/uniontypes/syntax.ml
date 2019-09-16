@@ -26,6 +26,7 @@ type ty =
   | TClosure of type_environment * name * ty (** closure (internal type) *)
   | TApplication of ty * ty (** type application [Foo int] *)
   | TExtends of ty * ty (** type predicate about subtype [Extends {x: int, y: bool} {x: int}] *)
+  | TDistribute of ty * ty (** distribute an operator over a union [Distribute (Const int) (A | B)] *)
 and type_environment = (name * ty) list
 
 (** Expressions *)
@@ -93,6 +94,7 @@ let string_of_type ty =
         | TClosure _ -> (4, "<type-closure>")
         | TApplication (ty1, ty2) -> (4, Printf.sprintf "(%s %s)" (to_str 0 ty1) (to_str 0 ty2))
         | TExtends (ty1, ty2) -> (4, Printf.sprintf "(%s extends %s)" (to_str 0 ty1) (to_str 0 ty2))
+        | TDistribute (ty1, ty2) -> (4, Printf.sprintf "(Distribute %s %s)" (to_str 0 ty1) (to_str 0 ty2))
     in
       if m > n then str else "(" ^ str ^ ")"
   in

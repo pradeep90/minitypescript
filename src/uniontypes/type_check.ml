@@ -56,6 +56,10 @@ let rec kind_of kctx ty = match ty with
   | TExtends (ty_sub, ty_super) -> kind_check kctx ty_sub KStar;
                                    kind_check kctx ty_super KStar;
                                    KArrow (KStar, KArrow (KStar, KStar))
+  | TDistribute (ty1, ty_union) ->
+     (match kind_of kctx ty1 with
+      | KArrow (KStar, k2) -> kind_check kctx ty_union KStar; k2
+      | _ as kind -> kind_error (Printf.sprintf "TDistribute: expected arrow kind but got %s" (string_of_kind kind)))
 
 and kind_check kctx ty kind =
   let kty = kind_of kctx ty in
@@ -204,6 +208,7 @@ and substitute_params_maybe ctx ty =
   | TClosure _ -> type_error "substitute_params_maybe: TODO TClosure"
   | TApplication (ty1, ty2) -> TApplication (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
   | TExtends (ty1, ty2) -> TExtends (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
+  | TDistribute (ty1, ty2) -> TDistribute (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
 
 and get_stored_types env = List.concat (List.map (fun (n, e) -> match decode_type_application (n, e) with | Some p' -> [p'] | None -> []) env)
 
@@ -229,7 +234,7 @@ and eval_type tenv ty = match ty with
      (match eval_type tenv ty1 with
       | TClosure (tenv', x, ty') ->
          eval_type ((x, eval_type tenv ty2)::tenv') ty'
-      | _ -> type_error (Printf.sprintf "invalid application of %s to %s" (string_of_type ty1) (string_of_type ty2)))
+      | _ -> type_error (Printf.sprintf "eval_type: invalid application of %s to %s" (string_of_type ty1) (string_of_type ty2)))
   | TExtends (ty_sub, ty_super) ->
      let ty_sub' = eval_type tenv ty_sub
      and ty_super' = eval_type tenv ty_super
@@ -237,3 +242,15 @@ and eval_type tenv ty = match ty with
      eval_type tenv (if (subtype ty_sub' ty_super')
                      then true_type_operator
                      else false_type_operator)
+  | TDistribute (ty1, ty_union) ->
+     let ty_union' = eval_type tenv ty_union
+     in
+     (match ty_union' with
+      | TUnion (ty_a, ty_b) ->
+         (match eval_type tenv (TDistribute (ty1, ty_a)), eval_type tenv (TDistribute (ty1, ty_b)) with
+          | TNever, TNever -> TNever
+          | TNever, ty' -> ty'
+          | ty', TNever -> ty'
+          | ty1, ty2 -> TUnion (ty1, ty2))
+      | _ -> eval_type tenv (TApplication (ty1, ty_union'))
+     )

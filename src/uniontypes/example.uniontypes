@@ -174,12 +174,6 @@ match bar with | (Bar -> Bar) as g -> g 3 | Bar as x -> x;;
 # Errors.
 # Left [Bar -> Bar] [Bar -> Bar] toggle;;
 
-type Lion = {tail_length: int, meow_loudness: int};;
-type Tiger = {tail_length: int, meow_loudness: int};;
-type Zebra = {tail_length: int, num_stripes: int};;
-type Shark = {num_fins: int, num_gills: int};;
-type Animal = Lion | Zebra | Tiger | Shark;;
-
 # Type abstraction.
 type Id = tfun f(A): * -> * is A;;
 type Const = tfun f(A): * -> * -> * is tfun g(B): * -> * is A;;
@@ -207,11 +201,20 @@ id [ConstIntBoolTwo] 3;;
 # type Foo = Const | Id;;
 # type Foo = Const & Id;;
 
+type Lion = {tail_length: int, meow_loudness: int};;
+type Tiger = {tail_length: int, meow_loudness: int};;
+type Zebra = {tail_length: int, num_stripes: int};;
+type Shark = {num_fins: int, num_gills: int};;
+type Animal = Lion | Zebra | Tiger | Shark;;
+
 # If statement.
 type True = tfun f(T): * -> * -> * is tfun g(F): * -> * is T;;
 type False = tfun f(T): * -> * -> * is tfun g(F): * -> * is F;;
 type If = tfun f(B): (* -> * -> *) -> * -> * -> * is tfun g(T): * -> * -> * is tfun h(F): * -> * is B T F;;
+type Not = tfun f(B): (* -> * -> *) -> * -> * -> * is tfun g(T): * -> * -> * is tfun h(F): * -> * is B F T;;
 type Foo = If False Lion Zebra;;
+type TryNot = If (Not False) Lion Zebra;;
+type TryNot = If (Not True) Lion Zebra;;
 type TypeExtends = (Lion extends {tail_length: int});;
 type Foo = If (Lion extends {tail_length: int}) Lion Tiger;;
 type Foo = If (Lion extends {tail_length: int}) Lion Never;;
@@ -220,6 +223,16 @@ type Foo = If (Lion extends {tail_length: int}) Lion Never;;
 let tryNever = fun f(x): Never -> int is 3;;
 # Will give an error.
 # tryNever 7;;
+
+# Conditional types.
+type ExtractCat = tfun f(A): * -> * is If (A extends { meow_loudness: int }) A Never;;
+type ExtractNonCat = tfun f(A): * -> * is If (Not (A extends { meow_loudness: int })) A Never;;
+type Test = If (Animal extends { meow_loudness: int }) Animal Never;;
+# => Never
+type Cat = ExtractCat Over Animal;;
+# => Lion | Tiger
+type NonCat = ExtractNonCat Over Animal;;
+# => Zebra | Shark
 
 # # Only common attributes are fine.
 # let canLayEgg = fun f(animal): {wingSpan: int, canLayEgg: bool} | {finLength: int, canLayEgg: bool} -> bool is

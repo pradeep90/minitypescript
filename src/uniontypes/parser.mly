@@ -21,6 +21,7 @@
 %token LEFT RIGHT MATCH PIPE WITH AS
 %token AMPERSAND
 %token TYPELET TYPEFUN EXTENDS TNEVER
+%token TDISTRIBUTE
 
 %start toplevel
 %start file
@@ -135,6 +136,7 @@ ty:
   | ty PIPE ty                          { TUnion ($1, $3) }
   | ty AMPERSAND ty                     { TRecord [("fst", $1); ("snd", $3)] }
   | ty EXTENDS ty                       { TExtends ($1, $3) }
+  | ty TDISTRIBUTE ty                   { TDistribute ($1, $3) }
   | TYPELET VAR EQUAL ty IN ty          { TLet ($2, $4, $6) }
 
 ty_app:

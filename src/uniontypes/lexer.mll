@@ -41,6 +41,7 @@ rule token = parse
   | "tfun"          { TYPEFUN }
   | "extends"       { EXTENDS }
   | "Never"         { TNEVER }
+  | "Over"          { TDISTRIBUTE }
   | ";;"            { SEMICOLON2 }
   | '('             { LPAREN }
   | ')'             { RPAREN }
