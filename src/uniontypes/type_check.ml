@@ -3,9 +3,12 @@
 open Syntax
 
 exception Type_error of string
+exception Kind_error of string
 
 (** [type_error msg] spro¾i izjemo [Type_error msg] *)
 let type_error msg = raise (Type_error msg)
+
+let kind_error msg = raise (Kind_error msg)
 
 (** [occurs x lst] returns [true] if [x] appears as a key in the
     associative array [lst] *)
@@ -22,6 +25,34 @@ let rec check_labels = function
 let lookup_type x ctx =
   try List.assoc x ctx with Not_found -> type_error ("unknown variable " ^ x)
 
+let rec kind_of kctx ty = match ty with
+  | TParam x -> (try List.assoc x kctx with Not_found -> type_error ("unknown type parameter " ^ x))
+  | TInt
+  | TBool -> KStar
+  | TArrow (ty1, ty2) -> kind_check kctx ty1 KStar;
+                         kind_check kctx ty2 KStar;
+                         KStar
+  | TRecord tss -> List.iter (fun (l, ty') -> kind_check kctx ty' KStar) tss;
+     KStar
+  | TUnion (ty1, ty2) -> kind_check kctx ty1 KStar;
+                         kind_check kctx ty2 KStar; KStar
+  | TForAll (name, kind, ty') -> kind_of ((name, kind)::kctx) ty'
+  | TLet (name, ty1, ty2) -> kind_of ((name, kind_of kctx ty1)::kctx) ty2
+  | TAbstraction (f, x, kind, ty) ->
+     (match kind with
+      | KArrow (k1, k2) as karrow ->
+         kind_check ((f, KArrow (k1, k2)) :: (x, k1) :: kctx) ty k2;
+         karrow
+      | _ -> kind_error (Printf.sprintf "expected arrow kind but got %s" (string_of_kind kind)))
+  | TClosure (_, kind, _) -> kind_error "kind_of: should not reach here"
+  | TApplication (ty1, ty2) ->
+     (match kind_of kctx ty1 with
+      | KArrow (k1, k2) -> kind_check kctx ty2 k1; k2
+      | _ as kind -> kind_error (Printf.sprintf "application: expected arrow kind but got %s" (string_of_kind kind)))
+and kind_check kctx ty kind =
+  let kty = kind_of kctx ty in
+  if not (kty = kind) then kind_error (Printf.sprintf "incompatible kinds: %s is not the same as kind %s" (string_of_kind kty) (string_of_kind kind))
+
 let rec eval_type tenv ty = match ty with
   | TInt | TBool -> ty
   | TParam name -> (try List.assoc name tenv with Not_found -> ty)
@@ -31,6 +62,13 @@ let rec eval_type tenv ty = match ty with
      TForAll (name, kind, eval_type ((name, TParam name)::tenv) ty')
   | TUnion (ty1, ty2) -> TUnion (eval_type tenv ty1, eval_type tenv ty2)
   | TLet (name, ty1, ty2) -> eval_type ((name, eval_type tenv ty1)::tenv) ty2
+  | TAbstraction (f, x, kind, ty) ->
+     let rec tc = TClosure ((f, tc)::tenv, x, ty) in tc
+  | TClosure _ -> ty
+  | TApplication (ty1, ty2) ->
+     (match eval_type tenv ty1 with
+      | TClosure (tenv', x, ty') -> eval_type ((x, eval_type tenv ty2)::tenv') ty'
+      | _ -> type_error (Printf.sprintf "invalid application of %s to %s" (string_of_type ty1) (string_of_type ty2)))
 
 (** [type_of ctx e] returns the type of [e] in context [ctx]. *)
 let rec type_of ctx = function
@@ -171,6 +209,9 @@ and substitute_params_maybe ctx ty =
      TForAll (name, kind, substitute_params_maybe ((name, TParam name)::ctx) ty)
   | TUnion (ty1, ty2) -> TUnion (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
   | TLet (name, ty1, ty2) -> substitute_params_maybe ((name, ty1)::ctx) ty2
+  | TAbstraction (f, x, kind, ty) -> type_error "substitute_params_maybe: TODO TAbstraction"
+  | TClosure _ -> type_error "substitute_params_maybe: TODO TClosure"
+  | TApplication (ty1, ty2) -> TApplication (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
 
 and get_stored_types env = List.concat (List.map (fun (n, e) -> match decode_type_application (n, e) with | Some p' -> [p'] | None -> []) env)
 

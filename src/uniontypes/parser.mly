@@ -20,7 +20,7 @@
 %token LAMBDASLASH FORALL LSQUARE RSQUARE
 %token LEFT RIGHT MATCH PIPE WITH AS
 %token AMPERSAND
-%token TYPELET
+%token TYPELET TYPEFUN
 
 %start toplevel
 %start file
@@ -127,17 +127,27 @@ field:
   | VAR COLON expr          { ($1, $3) }
 
 ty:
-    TBOOL                               { TBool }
-  | TINT                                { TInt }
-  | ty TARROW ty                        { TArrow ($1, $3) }
-  | VAR                                 { TParam $1 }
+  | ty_non_app                          { $1 }
+  | ty_app                              { $1 }
+  | TYPEFUN VAR LPAREN VAR RPAREN COLON kind IS ty { TAbstraction ($2, $4, $7, $9) }
   | FORALL VAR COLON kind PERIOD ty     { TForAll ($2, $4, $6) }
-  | LBRACE RBRACE                       { TRecord [] }
-  | LBRACE trecord_list RBRACE          { TRecord $2 }
+  | ty TARROW ty                        { TArrow ($1, $3) }
   | ty PIPE ty                          { TUnion ($1, $3) }
   | ty AMPERSAND ty                     { TRecord [("fst", $1); ("snd", $3)] }
-  | LPAREN ty RPAREN                    { $2 }
   | TYPELET VAR EQUAL ty IN ty          { TLet ($2, $4, $6) }
+
+ty_app:
+  | ty_app ty_non_app         { TApplication ($1, $2) }
+  | ty_non_app ty_non_app     { TApplication ($1, $2) }
+
+/* Types that can be followed by an argument after a space. */
+ty_non_app:
+  | TBOOL                               { TBool }
+  | TINT                                { TInt }
+  | VAR                                 { TParam $1 }
+  | LBRACE RBRACE                       { TRecord [] }
+  | LBRACE trecord_list RBRACE          { TRecord $2 }
+  | LPAREN ty RPAREN                    { $2 }
 
 trecord_list:
   | tfield                    { [$1] }
@@ -148,5 +158,6 @@ tfield:
 
 kind:
   | TIMES                     { KStar }
+  | kind TARROW kind          { KArrow ($1, $3) }
 
 %%

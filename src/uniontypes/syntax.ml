@@ -9,6 +9,7 @@ type label = string
 (** Kinds. *)
 type kind =
   | KStar (** Base kind [*]. *)
+  | KArrow of kind * kind (** Higher kind [* -> *]. *)
 
 (** Types *)
 type ty =
@@ -20,6 +21,10 @@ type ty =
   | TForAll of name * kind * ty (** parametric polymorphism [forall A: * . A -> A] *)
   | TUnion of ty * ty (** union type [ty1 | ty2] *)
   | TLet of name * ty * ty (** type-let [type Foo = A | B | ... in Foo -> Foo] *)
+  | TAbstraction of name * name * kind * ty (** named type-abstraction [tfun f(A): * -> * is ty] *)
+  | TClosure of type_environment * name * ty (** closure (internal type) *)
+  | TApplication of ty * ty (** type application [Foo int] *)
+and type_environment = (name * ty) list
 
 (** Expressions *)
 type expr =
@@ -62,6 +67,7 @@ type toplevel_cmd =
 (** [string_of_kind k] converts a kind [k] to a string. *)
 let rec string_of_kind = function
   | KStar -> "*"
+  | KArrow (k1, k2) -> Printf.sprintf "%s -> %s" (string_of_kind k1) (string_of_kind k2)
 
 (** [string_of_type ty] converts type [ty] to a string. *)
 let string_of_type ty =
@@ -80,6 +86,8 @@ let string_of_type ty =
         | TForAll (name, kind, ty) -> (4, "(forall " ^ name ^ ": " ^ string_of_kind kind ^ ". " ^ to_str 0 ty ^ ")")
         | TUnion (ty1, ty2) -> (4, Printf.sprintf "(%s | %s)" (to_str 0 ty1) (to_str 0 ty2))
         | TLet (name, ty1, ty2) -> (4, Printf.sprintf "type %s = %s in %s" name (to_str 0 ty1) (to_str 0 ty2))
+        | TAbstraction (f, x, kind, ty) -> (4, Printf.sprintf "tfun %s(%s): %s is %s" f x (string_of_kind kind) (to_str 0 ty))
+        | TClosure _ -> (4, "<type-closure>")
     in
       if m > n then str else "(" ^ str ^ ")"
   in

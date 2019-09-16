@@ -38,6 +38,7 @@ rule token = parse
   | "with"          { WITH }
   | "as"            { AS }
   | "type"          { TYPELET }
+  | "tfun"          { TYPEFUN }
   | ";;"            { SEMICOLON2 }
   | '('             { LPAREN }
   | ')'             { RPAREN }
