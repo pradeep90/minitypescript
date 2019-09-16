@@ -207,6 +207,20 @@ id [ConstIntBoolTwo] 3;;
 # type Foo = Const | Id;;
 # type Foo = Const & Id;;
 
+# If statement.
+type True = tfun f(T): * -> * -> * is tfun g(F): * -> * is T;;
+type False = tfun f(T): * -> * -> * is tfun g(F): * -> * is F;;
+type If = tfun f(B): (* -> * -> *) -> * -> * -> * is tfun g(T): * -> * -> * is tfun h(F): * -> * is B T F;;
+type Foo = If False Lion Zebra;;
+type TypeExtends = (Lion extends {tail_length: int});;
+type Foo = If (Lion extends {tail_length: int}) Lion Tiger;;
+type Foo = If (Lion extends {tail_length: int}) Lion Never;;
+
+# Never.
+let tryNever = fun f(x): Never -> int is 3;;
+# Will give an error.
+# tryNever 7;;
+
 # # Only common attributes are fine.
 # let canLayEgg = fun f(animal): {wingSpan: int, canLayEgg: bool} | {finLength: int, canLayEgg: bool} -> bool is
 #     animal.canLayEgg

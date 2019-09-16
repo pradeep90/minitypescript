@@ -25,10 +25,14 @@ let rec check_labels = function
 let lookup_type x ctx =
   try List.assoc x ctx with Not_found -> type_error ("unknown variable " ^ x)
 
+let true_type_operator = TAbstraction ("f", "T", KArrow (KStar, KArrow (KStar, KStar)), TAbstraction ("g", "F", KArrow (KStar, KStar), TParam "T"))
+let false_type_operator = TAbstraction ("f", "T", KArrow (KStar, KArrow (KStar, KStar)), TAbstraction ("g", "F", KArrow (KStar, KStar), TParam "F"))
+
 let rec kind_of kctx ty = match ty with
   | TParam x -> (try List.assoc x kctx with Not_found -> type_error ("unknown type parameter " ^ x))
   | TInt
   | TBool -> KStar
+  | TNever -> KStar
   | TArrow (ty1, ty2) -> kind_check kctx ty1 KStar;
                          kind_check kctx ty2 KStar;
                          KStar
@@ -49,26 +53,13 @@ let rec kind_of kctx ty = match ty with
      (match kind_of kctx ty1 with
       | KArrow (k1, k2) -> kind_check kctx ty2 k1; k2
       | _ as kind -> kind_error (Printf.sprintf "application: expected arrow kind but got %s" (string_of_kind kind)))
+  | TExtends (ty_sub, ty_super) -> kind_check kctx ty_sub KStar;
+                                   kind_check kctx ty_super KStar;
+                                   KArrow (KStar, KArrow (KStar, KStar))
+
 and kind_check kctx ty kind =
   let kty = kind_of kctx ty in
   if not (kty = kind) then kind_error (Printf.sprintf "incompatible kinds: %s is not the same as kind %s" (string_of_kind kty) (string_of_kind kind))
-
-let rec eval_type tenv ty = match ty with
-  | TInt | TBool -> ty
-  | TParam name -> (try List.assoc name tenv with Not_found -> ty)
-  | TArrow (ty_in, ty_out) -> TArrow (eval_type tenv ty_in, eval_type tenv ty_out)
-  | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, eval_type tenv ty')) tss)
-  | TForAll (name, kind, ty') ->
-     TForAll (name, kind, eval_type ((name, TParam name)::tenv) ty')
-  | TUnion (ty1, ty2) -> TUnion (eval_type tenv ty1, eval_type tenv ty2)
-  | TLet (name, ty1, ty2) -> eval_type ((name, eval_type tenv ty1)::tenv) ty2
-  | TAbstraction (f, x, kind, ty) ->
-     let rec tc = TClosure ((f, tc)::tenv, x, ty) in tc
-  | TClosure _ -> ty
-  | TApplication (ty1, ty2) ->
-     (match eval_type tenv ty1 with
-      | TClosure (tenv', x, ty') -> eval_type ((x, eval_type tenv ty2)::tenv') ty'
-      | _ -> type_error (Printf.sprintf "invalid application of %s to %s" (string_of_type ty1) (string_of_type ty2)))
 
 (** [type_of ctx e] returns the type of [e] in context [ctx]. *)
 let rec type_of ctx = function
@@ -201,7 +192,7 @@ and matching_function_type ty_arg ty =
    their definitions from [ctx], if available. *)
 and substitute_params_maybe ctx ty =
   match ty with
-  | TInt | TBool -> ty
+  | TInt | TBool | TNever -> ty
   | TParam name -> (try List.assoc name ctx with Not_found -> ty)
   | TArrow (ty_in, ty_out) -> TArrow (substitute_params_maybe ctx ty_in, substitute_params_maybe ctx ty_out)
   | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, substitute_params_maybe ctx ty')) tss)
@@ -212,6 +203,7 @@ and substitute_params_maybe ctx ty =
   | TAbstraction (f, x, kind, ty) -> type_error "substitute_params_maybe: TODO TAbstraction"
   | TClosure _ -> type_error "substitute_params_maybe: TODO TClosure"
   | TApplication (ty1, ty2) -> TApplication (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
+  | TExtends (ty1, ty2) -> TExtends (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
 
 and get_stored_types env = List.concat (List.map (fun (n, e) -> match decode_type_application (n, e) with | Some p' -> [p'] | None -> []) env)
 
@@ -220,3 +212,28 @@ and decode_type_application (name, e_ty) = (match e_ty with
                                             | Closure ([], "hack_to_store_type", Var "dummy", ty) -> Some (name, ty)
                                             | _ -> None
                                            )
+
+and eval_type tenv ty = match ty with
+  | TInt | TBool | TNever -> ty
+  | TParam name -> (try List.assoc name tenv with Not_found -> ty)
+  | TArrow (ty_in, ty_out) -> TArrow (eval_type tenv ty_in, eval_type tenv ty_out)
+  | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, eval_type tenv ty')) tss)
+  | TForAll (name, kind, ty') ->
+     TForAll (name, kind, eval_type ((name, TParam name)::tenv) ty')
+  | TUnion (ty1, ty2) -> TUnion (eval_type tenv ty1, eval_type tenv ty2)
+  | TLet (name, ty1, ty2) -> eval_type ((name, eval_type tenv ty1)::tenv) ty2
+  | TAbstraction (f, x, kind, ty) ->
+     let rec tc = TClosure ((f, tc)::tenv, x, ty) in tc
+  | TClosure _ -> ty
+  | TApplication (ty1, ty2) ->
+     (match eval_type tenv ty1 with
+      | TClosure (tenv', x, ty') ->
+         eval_type ((x, eval_type tenv ty2)::tenv') ty'
+      | _ -> type_error (Printf.sprintf "invalid application of %s to %s" (string_of_type ty1) (string_of_type ty2)))
+  | TExtends (ty_sub, ty_super) ->
+     let ty_sub' = eval_type tenv ty_sub
+     and ty_super' = eval_type tenv ty_super
+     in
+     eval_type tenv (if (subtype ty_sub' ty_super')
+                     then true_type_operator
+                     else false_type_operator)

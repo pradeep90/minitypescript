@@ -20,7 +20,7 @@
 %token LAMBDASLASH FORALL LSQUARE RSQUARE
 %token LEFT RIGHT MATCH PIPE WITH AS
 %token AMPERSAND
-%token TYPELET TYPEFUN
+%token TYPELET TYPEFUN EXTENDS TNEVER
 
 %start toplevel
 %start file
@@ -134,6 +134,7 @@ ty:
   | ty TARROW ty                        { TArrow ($1, $3) }
   | ty PIPE ty                          { TUnion ($1, $3) }
   | ty AMPERSAND ty                     { TRecord [("fst", $1); ("snd", $3)] }
+  | ty EXTENDS ty                       { TExtends ($1, $3) }
   | TYPELET VAR EQUAL ty IN ty          { TLet ($2, $4, $6) }
 
 ty_app:
@@ -144,6 +145,7 @@ ty_app:
 ty_non_app:
   | TBOOL                               { TBool }
   | TINT                                { TInt }
+  | TNEVER                              { TNever }
   | VAR                                 { TParam $1 }
   | LBRACE RBRACE                       { TRecord [] }
   | LBRACE trecord_list RBRACE          { TRecord $2 }
@@ -157,6 +159,7 @@ tfield:
   | VAR COLON ty              { ($1, $3) }
 
 kind:
+  | LPAREN kind RPAREN        { $2 }
   | TIMES                     { KStar }
   | kind TARROW kind          { KArrow ($1, $3) }
 

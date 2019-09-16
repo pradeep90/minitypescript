@@ -13,6 +13,7 @@ type kind =
 
 (** Types *)
 type ty =
+  | TNever (** Type for which nothing is a subtype [Never] *)
   | TInt (** integers [int] *)
   | TBool (** boolean values [bool] *)
   | TArrow of ty * ty (** function types [ty1 -> ty2] *)
@@ -24,6 +25,7 @@ type ty =
   | TAbstraction of name * name * kind * ty (** named type-abstraction [tfun f(A): * -> * is ty] *)
   | TClosure of type_environment * name * ty (** closure (internal type) *)
   | TApplication of ty * ty (** type application [Foo int] *)
+  | TExtends of ty * ty (** type predicate about subtype [Extends {x: int, y: bool} {x: int}] *)
 and type_environment = (name * ty) list
 
 (** Expressions *)
@@ -67,7 +69,7 @@ type toplevel_cmd =
 (** [string_of_kind k] converts a kind [k] to a string. *)
 let rec string_of_kind = function
   | KStar -> "*"
-  | KArrow (k1, k2) -> Printf.sprintf "%s -> %s" (string_of_kind k1) (string_of_kind k2)
+  | KArrow (k1, k2) -> Printf.sprintf "(%s -> %s)" (string_of_kind k1) (string_of_kind k2)
 
 (** [string_of_type ty] converts type [ty] to a string. *)
 let string_of_type ty =
@@ -76,6 +78,7 @@ let string_of_type ty =
       match ty with
 	| TInt -> (4, "int")
 	| TBool -> (4, "bool")
+        | TNever -> (4, "Never")
 	| TRecord ts ->
 	    (4, "{" ^
 	       String.concat ", "
@@ -88,6 +91,8 @@ let string_of_type ty =
         | TLet (name, ty1, ty2) -> (4, Printf.sprintf "type %s = %s in %s" name (to_str 0 ty1) (to_str 0 ty2))
         | TAbstraction (f, x, kind, ty) -> (4, Printf.sprintf "tfun %s(%s): %s is %s" f x (string_of_kind kind) (to_str 0 ty))
         | TClosure _ -> (4, "<type-closure>")
+        | TApplication (ty1, ty2) -> (4, Printf.sprintf "(%s %s)" (to_str 0 ty1) (to_str 0 ty2))
+        | TExtends (ty1, ty2) -> (4, Printf.sprintf "(%s extends %s)" (to_str 0 ty1) (to_str 0 ty2))
     in
       if m > n then str else "(" ^ str ^ ")"
   in

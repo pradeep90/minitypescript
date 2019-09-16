@@ -39,6 +39,8 @@ rule token = parse
   | "as"            { AS }
   | "type"          { TYPELET }
   | "tfun"          { TYPEFUN }
+  | "extends"       { EXTENDS }
+  | "Never"         { TNEVER }
   | ";;"            { SEMICOLON2 }
   | '('             { LPAREN }
   | ')'             { RPAREN }
