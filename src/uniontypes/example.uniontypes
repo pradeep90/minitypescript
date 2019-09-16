@@ -1,30 +1,5 @@
-let u = { re : 1, im : 0 }
-;;
-
-let conjugate =
-  fun f(z): {re:int, im:int} -> {re:int, im:int} is
-    {re : z.re, im : 0 - z.im}
-;;
-
-let plus =
-  fun f(z) : {re:int, im:int} -> {re:int, im:int} -> {re:int, im:int} is
-  fun g(w) : {re:int, im:int} -> {re:int, im:int} is
-    { re : z.re + w.re, im : z.im + w.im }
-;;
-
-plus u (conjugate u)
-
-;;
-
-conjugate {re : 5, im : 7, foo : {}, bar
-: conjugate}
-;;
-
 let increment = fun f(x): int -> int is x + 1
-;;
-
-let id = \A:* . fun f(x): A -> A is x
-;;
+let id = \A:* . fun f(x): A -> A is x;;
 
 id [int] 3;;
 
@@ -33,11 +8,9 @@ id [{a: int}] {a : 1};;
 
 id [forall A:*. A -> A] id;;
 
-let const = \A:*. \B:*. fun f(x): A -> B -> A is fun g(y): B -> A is x
-;;
+let const = \A:*. \B:*. fun f(x): A -> B -> A is fun g(y): B -> A is x;;
 const [int] [int] 1 2;;
 const [bool] [int] true 3;;
-
 const [int] [forall A:*. A -> A] 7 id;;
 
 let compose = \A:*. \B:*. \C:*.
@@ -51,9 +24,19 @@ let incrementByTwo = compose [int] [int] [int] increment increment;;
 
 incrementByTwo 3;;
 
-let fxx = fun f1(x): (forall A:*. A -> A) -> (forall B:*. B -> B) is x [forall C:*. C -> C] x
-;;
+let fxx = fun f1(x): (forall A:*. A -> A) -> (forall B:*. B -> B) is x [forall C:*. C -> C] x;;
 fxx id;;
+
+# Lexical binding.
+# Should be 3, not 4.
+let z = 3 in
+    let lexical_fun = \A: *. fun f(x): A -> int is z in
+    	let z = 4 in
+	    lexical_fun [int] 0
+;;
+
+
+
 
 # Union types.
 
@@ -96,6 +79,9 @@ applyUnionFn (Left [int -> int] [bool -> int] increment);;
 applyUnionFn (Right [int -> int] [bool -> int] boolToInt);;
 applyUnionFn increment;;
 applyUnionFn boolToInt;;
+
+
+
 
 # Intersection type.
 
@@ -149,14 +135,6 @@ g (Right [int] [bool] true);;
 g 7;;
 g true;;
 
-# Lexical binding.
-# Should be 3, not 4.
-let z = 3 in
-    let lexical_fun = \A: *. fun f(x): A -> int is z in
-    	let z = 4 in
-	    lexical_fun [int] 0
-;;
-
 # Record containing polymorphic function applied to concrete types.
 {fst: incrementByTwo, snd: toggle} 8;;
 
@@ -169,6 +147,9 @@ let foo = \A: *. fun f1(f): ((A -> A) | A) -> A -> A is
 ;;
 let bar = foo [int] increment 2;;
 let bar = foo [int] 4 2;;
+
+
+
 
 # Type-let.
 let foo = fun f(x): (type Foo = int in Foo -> Foo) is x + 3;;
