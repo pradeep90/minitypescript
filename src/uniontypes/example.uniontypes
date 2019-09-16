@@ -170,6 +170,18 @@ let foo = \A: *. fun f1(f): ((A -> A) | A) -> A -> A is
 let bar = foo [int] increment 2;;
 let bar = foo [int] 4 2;;
 
+# Type-let.
+let foo = fun f(x): (type Foo = int in Foo -> Foo) is x + 3;;
+foo 7;;
+id [type Bar = int in Bar] 3;;
+match foo with | (type Bar = int in Bar -> Bar) as g -> g 3 | int as x -> x;;
+Left [type Baz = int in Baz -> Baz] [type Baz = bool in Baz -> Baz] increment;;
+
+# Errors.
+# id [type Bar = int in Bar -> Bar] toggle;;
+# let foo = fun f(x): (type Foo = bool in Foo -> Foo) is x + 3;;
+# let foo = fun f(x): (type Foo = int in Foo) is x + 3;;
+
 # # Only common attributes are fine.
 # let canLayEgg = fun f(animal): {wingSpan: int, canLayEgg: bool} | {finLength: int, canLayEgg: bool} -> bool is
 #     animal.canLayEgg

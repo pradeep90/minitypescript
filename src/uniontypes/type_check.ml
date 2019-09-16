@@ -22,6 +22,16 @@ let rec check_labels = function
 let lookup_type x ctx =
   try List.assoc x ctx with Not_found -> type_error ("unknown variable " ^ x)
 
+let rec eval_type tenv ty = match ty with
+  | TInt | TBool -> ty
+  | TParam name -> (try List.assoc name tenv with Not_found -> ty)
+  | TArrow (ty_in, ty_out) -> TArrow (eval_type tenv ty_in, eval_type tenv ty_out)
+  | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, eval_type tenv ty')) tss)
+  | TForAll (name, kind, ty') ->
+     TForAll (name, kind, eval_type ((name, TParam name)::tenv) ty')
+  | TUnion (ty1, ty2) -> TUnion (eval_type tenv ty1, eval_type tenv ty2)
+  | TLet (name, ty1, ty2) -> eval_type ((name, eval_type tenv ty1)::tenv) ty2
+
 (** [type_of ctx e] returns the type of [e] in context [ctx]. *)
 let rec type_of ctx = function
     Var x -> lookup_type x ctx
@@ -44,11 +54,13 @@ let rec type_of ctx = function
 	else if subtype ty3 ty2 then ty2
 	else type_error "incompatible types in conditional"
   | Fun (f, x, ty, e) ->
-     (match ty with
+     let ty_eval = eval_type [] ty
+     in
+     (match ty_eval with
       | TArrow (ty1, ty2) ->
          check ((f, TArrow(ty1,ty2)) :: (x, ty1) :: ctx) e ty2 ;
          TArrow (ty1, ty2)
-      | _ -> type_error ("expected function type but got " ^ string_of_type ty))
+      | _ -> type_error ("expected function type but got " ^ string_of_type ty_eval))
   | TFun (name, kind, e) -> TForAll (name, kind, type_of ctx e)
   | Closure (_, _, _, ty) -> ty
   | Let (x, e1, e2) -> type_of ((x, type_of ctx e1)::ctx) e2
@@ -68,8 +80,9 @@ let rec type_of ctx = function
                   | _ -> type_error (Printf.sprintf "App: expected %s to be a subtype of an arrow type in %s" (string_of_type ty_arg) (string_of_type ty))))
       | _ as ty -> type_error ("App: expected function but got " ^ string_of_type ty))
   | TApp (e1, ty_arg) ->
+     let ty_arg_eval = eval_type [] ty_arg in
      (match type_of ctx e1 with
-      | TForAll (name, _, ty) -> substitute_params_maybe ((name, ty_arg)::ctx) ty
+      | TForAll (name, _, ty) -> substitute_params_maybe ((name, ty_arg_eval)::ctx) ty
       | _ as ty -> type_error ("expected `forall`, but got " ^ string_of_type ty)
      )
   | Record rs ->
@@ -81,12 +94,17 @@ let rec type_of ctx = function
 	     (try List.assoc l ts with
 		  Not_found -> type_error ("no such field " ^ l))
 	 | _ -> type_error "record expected" )
-  | Left (ty1, ty2, e) -> check ctx e ty1; TUnion (ty1, ty2)
-  | Right (ty1, ty2, e) -> check ctx e ty2; TUnion (ty1, ty2)
+  | Left (ty1, ty2, e) ->
+     let ty1_eval, ty2_eval = eval_type [] ty1, eval_type [] ty2 in
+     check ctx e ty1_eval; TUnion (ty1_eval, ty2_eval)
+  | Right (ty1, ty2, e) ->
+     let ty1_eval, ty2_eval = eval_type [] ty1, eval_type [] ty2 in
+     check ctx e ty2_eval; TUnion (ty1_eval, ty2_eval)
   | Match (e, ty1, n1, e1, ty2, n2, e2) ->
-     check ctx e (TUnion (ty1, ty2));
-     let ty_left = type_of ((n1, ty1)::ctx) e1
-     and ty_right = type_of ((n2, ty2)::ctx) e2
+     let ty1_eval, ty2_eval = eval_type [] ty1, eval_type [] ty2 in
+     check ctx e (TUnion (ty1_eval, ty2_eval));
+     let ty_left = type_of ((n1, ty1_eval)::ctx) e1
+     and ty_right = type_of ((n2, ty2_eval)::ctx) e2
      in
      if subtype ty_left ty_right then ty_right
      else if subtype ty_right ty_left then ty_left
@@ -152,6 +170,7 @@ and substitute_params_maybe ctx ty =
   | TForAll (name, kind, ty) ->
      TForAll (name, kind, substitute_params_maybe ((name, TParam name)::ctx) ty)
   | TUnion (ty1, ty2) -> TUnion (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
+  | TLet (name, ty1, ty2) -> substitute_params_maybe ((name, ty1)::ctx) ty2
 
 and get_stored_types env = List.concat (List.map (fun (n, e) -> match decode_type_application (n, e) with | Some p' -> [p'] | None -> []) env)
 

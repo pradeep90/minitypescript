@@ -37,6 +37,7 @@ rule token = parse
   | "match"         { MATCH }
   | "with"          { WITH }
   | "as"            { AS }
+  | "type"          { TYPELET }
   | ";;"            { SEMICOLON2 }
   | '('             { LPAREN }
   | ')'             { RPAREN }

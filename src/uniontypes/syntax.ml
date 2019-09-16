@@ -19,6 +19,7 @@ type ty =
   | TParam of name (** type parameter like in [Container A] *)
   | TForAll of name * kind * ty (** parametric polymorphism [forall A: * . A -> A] *)
   | TUnion of ty * ty (** union type [ty1 | ty2] *)
+  | TLet of name * ty * ty (** type-let [type Foo = A | B | ... in Foo -> Foo] *)
 
 (** Expressions *)
 type expr =
@@ -77,6 +78,7 @@ let string_of_type ty =
         | TParam name -> (4, name)
         | TForAll (name, kind, ty) -> (4, "(forall " ^ name ^ ": " ^ string_of_kind kind ^ ". " ^ to_str 0 ty ^ ")")
         | TUnion (ty1, ty2) -> (4, Printf.sprintf "(%s | %s)" (to_str 0 ty1) (to_str 0 ty2))
+        | TLet (name, ty1, ty2) -> (4, Printf.sprintf "type %s = %s in %s" name (to_str 0 ty1) (to_str 0 ty2))
     in
       if m > n then str else "(" ^ str ^ ")"
   in
