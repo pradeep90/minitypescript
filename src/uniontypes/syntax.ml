@@ -106,7 +106,7 @@ let rec string_of_value = function
   | Bool b -> string_of_bool b
   | Record rs ->
       "{" ^ String.concat ", "
-	(List.map (fun (l,e) -> l ^ " = " ^ (string_of_value e)) rs) ^
+	(List.map (fun (l,e) -> l ^ ": " ^ (string_of_value e)) rs) ^
 	"}"
   | Closure _ -> "<fun>"
   | Left (_, _, x) -> "Left " ^ (string_of_value x)

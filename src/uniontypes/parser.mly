@@ -85,6 +85,7 @@ expr:
   | LEFT LSQUARE ty RSQUARE LSQUARE ty RSQUARE expr { Left ($3, $6, $8) }
   | RIGHT LSQUARE ty RSQUARE LSQUARE ty RSQUARE expr { Right ($3, $6, $8) }
   | MATCH expr WITH PIPE ty AS VAR TARROW expr PIPE ty AS VAR TARROW expr { Match ($2, $5, $7, $9, $11, $13, $15) }
+  | expr AMPERSAND expr { Record [("fst", $1); ("snd", $3)] }
 
 app:
     app non_app         { App ($1, $2) }
