@@ -149,6 +149,27 @@ g (Right [int] [bool] true);;
 g 7;;
 g true;;
 
+# Lexical binding.
+# Should be 3, not 4.
+let z = 3 in
+    let lexical_fun = \A: *. fun f(x): A -> int is z in
+    	let z = 4 in
+	    lexical_fun [int] 0
+;;
+
+# Record containing polymorphic function applied to concrete types.
+{fst: incrementByTwo, snd: toggle} 8;;
+
+# Match on polymorphic types.
+let foo = \A: *. fun f1(f): ((A -> A) | A) -> A -> A is
+    fun g(x): A -> A is
+    	match f with
+	| (A -> A) as f2 -> (f2 x)
+	| A as y -> y
+;;
+let bar = foo [int] increment 2;;
+let bar = foo [int] 4 2;;
+
 # # Only common attributes are fine.
 # let canLayEgg = fun f(animal): {wingSpan: int, canLayEgg: bool} | {finLength: int, canLayEgg: bool} -> bool is
 #     animal.canLayEgg

@@ -82,13 +82,19 @@ let test_fixture = "eval" >:::
   );
 
   "tfun" >:: (fun () ->
-    assert_equal (Int 3) (eval [] (TFun ("Foo", KStar, Int 3)))
+    assert_equal (TFun ("Foo", KStar, Int 3)) (eval [] (TFun ("Foo", KStar, Int 3)))
   );
 
   "closure" >:: (fun () ->
     let rec closure = Closure ([("f", closure)], "x", Var "x", TArrow (TInt, TInt))
     in
-    assert_equal true (closure == eval [] closure);
+    match closure with
+    | Closure (env, param, body, ty) ->
+       assert_equal "x" param;
+       assert_equal (Var "x") body;
+       assert_equal ty (TArrow (TInt, TInt));
+       assert_equal true (closure == (List.assoc "f" env)) ~msg:"function name should point to the closure";
+    | _ -> runtime_error "wrong output"
   );
 
   "let" >:: (fun () ->
@@ -108,6 +114,16 @@ let test_fixture = "eval" >:::
   "tapp" >:: (fun () ->
     let id_fun = TFun ("Foo", KStar, Fun ("id", "x", TArrow (TParam "Foo", TParam "Foo"), Var "x")) in
     assert_equal (Int 7) (eval [("yo", Int 7)] (App (TApp (id_fun, TInt), Var "yo")));
+  );
+
+  "app_polymorphic_record_fun" >:: (fun () ->
+    let compose_fun = TFun ("A", KStar, TFun ("B", KStar, TFun ("C", KStar, Fun ("f1", "f", TArrow (TArrow (TParam "B", TParam "C"), TArrow (TArrow (TParam "A", TParam "B"), TArrow (TParam "A", TParam "C"))), Fun ("f2", "g", TArrow (TArrow (TParam "A", TParam "B"), TArrow (TParam "A", TParam "C")), Fun ("f3", "x", TArrow (TParam "A", TParam "C"), App (Var "f", App (Var "g", Var "x"))))))))
+    in
+    let compose_int_int_int_fun = TApp (TApp (TApp (compose_fun, TInt), TInt), TInt) in
+    let increment_fun = Fun ("f", "x", TArrow (TInt, TInt), Plus (Var "x", Int 1)) in
+    let increment_by_two_fun = App (App (compose_int_int_int_fun, increment_fun), increment_fun) in
+    let record_fun = Record [("fst", increment_by_two_fun); ("snd", compose_fun)] in
+    assert_equal (Int 7) (eval [] (App (record_fun, Int 5)));
   );
 
   "record" >:: (fun () ->

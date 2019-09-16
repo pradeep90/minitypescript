@@ -152,3 +152,11 @@ and substitute_params_maybe ctx ty =
   | TForAll (name, kind, ty) ->
      TForAll (name, kind, substitute_params_maybe ((name, TParam name)::ctx) ty)
   | TUnion (ty1, ty2) -> TUnion (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
+
+and get_stored_types env = List.concat (List.map (fun (n, e) -> match decode_type_application (n, e) with | Some p' -> [p'] | None -> []) env)
+
+and encode_type_application (name, ty) = (name, Closure ([], "hack_to_store_type", Var "dummy", ty))
+and decode_type_application (name, e_ty) = (match e_ty with
+                                            | Closure ([], "hack_to_store_type", Var "dummy", ty) -> Some (name, ty)
+                                            | _ -> None
+                                           )
