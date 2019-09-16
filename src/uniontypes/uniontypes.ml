@@ -21,6 +21,11 @@ module UnionTypes = Zoo.Main(struct
         let v = Eval.eval env e in
         Zoo.print_info "val %s : %s = %s@." x (Syntax.string_of_type ty) (Syntax.string_of_value v) ;
         ((x,ty) :: ctx, (x,v) :: env)
+    | Syntax.TypeDecl (x, ty) ->
+        (* type-evaluate [ty], and store it in the context! *)
+        let ty_eval = Type_check.eval_type ctx ty in
+        Zoo.print_info "type %s : %s = %s@." x (Syntax.string_of_kind KStar) (Syntax.string_of_type ty_eval);
+        ((x, ty_eval) :: ctx, env)
 end) ;;
 
 UnionTypes.main ()

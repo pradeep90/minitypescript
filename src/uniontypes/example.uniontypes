@@ -182,6 +182,23 @@ Left [type Baz = int in Baz -> Baz] [type Baz = bool in Baz -> Baz] increment;;
 # let foo = fun f(x): (type Foo = bool in Foo -> Foo) is x + 3;;
 # let foo = fun f(x): (type Foo = int in Foo) is x + 3;;
 
+type Bar = int;;
+id [Bar -> Bar] increment;;
+id [Bar] 3;;
+let bar = fun g(x): (Bar -> Bar) is x + 3;;
+bar 19;;
+Left [Bar -> Bar] [Bar -> Bar] increment;;
+match bar with | (Bar -> Bar) as g -> g 3 | Bar as x -> x;;
+
+# Errors.
+# Left [Bar -> Bar] [Bar -> Bar] toggle;;
+
+type Lion = {tail_length: int, meow_loudness: int};;
+type Tiger = {tail_length: int, meow_loudness: int};;
+type Zebra = {tail_length: int, num_stripes: int};;
+type Shark = {num_fins: int, num_gills: int};;
+type Animal = Lion | Zebra | Tiger | Shark;;
+
 # # Only common attributes are fine.
 # let canLayEgg = fun f(animal): {wingSpan: int, canLayEgg: bool} | {finLength: int, canLayEgg: bool} -> bool is
 #     animal.canLayEgg

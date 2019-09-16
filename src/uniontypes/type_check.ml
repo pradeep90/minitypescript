@@ -54,7 +54,7 @@ let rec type_of ctx = function
 	else if subtype ty3 ty2 then ty2
 	else type_error "incompatible types in conditional"
   | Fun (f, x, ty, e) ->
-     let ty_eval = eval_type [] ty
+     let ty_eval = eval_type ctx ty
      in
      (match ty_eval with
       | TArrow (ty1, ty2) ->
@@ -80,7 +80,7 @@ let rec type_of ctx = function
                   | _ -> type_error (Printf.sprintf "App: expected %s to be a subtype of an arrow type in %s" (string_of_type ty_arg) (string_of_type ty))))
       | _ as ty -> type_error ("App: expected function but got " ^ string_of_type ty))
   | TApp (e1, ty_arg) ->
-     let ty_arg_eval = eval_type [] ty_arg in
+     let ty_arg_eval = eval_type ctx ty_arg in
      (match type_of ctx e1 with
       | TForAll (name, _, ty) -> substitute_params_maybe ((name, ty_arg_eval)::ctx) ty
       | _ as ty -> type_error ("expected `forall`, but got " ^ string_of_type ty)
@@ -95,13 +95,13 @@ let rec type_of ctx = function
 		  Not_found -> type_error ("no such field " ^ l))
 	 | _ -> type_error "record expected" )
   | Left (ty1, ty2, e) ->
-     let ty1_eval, ty2_eval = eval_type [] ty1, eval_type [] ty2 in
+     let ty1_eval, ty2_eval = eval_type ctx ty1, eval_type ctx ty2 in
      check ctx e ty1_eval; TUnion (ty1_eval, ty2_eval)
   | Right (ty1, ty2, e) ->
-     let ty1_eval, ty2_eval = eval_type [] ty1, eval_type [] ty2 in
+     let ty1_eval, ty2_eval = eval_type ctx ty1, eval_type ctx ty2 in
      check ctx e ty2_eval; TUnion (ty1_eval, ty2_eval)
   | Match (e, ty1, n1, e1, ty2, n2, e2) ->
-     let ty1_eval, ty2_eval = eval_type [] ty1, eval_type [] ty2 in
+     let ty1_eval, ty2_eval = eval_type ctx ty1, eval_type ctx ty2 in
      check ctx e (TUnion (ty1_eval, ty2_eval));
      let ty_left = type_of ((n1, ty1_eval)::ctx) e1
      and ty_right = type_of ((n2, ty2_eval)::ctx) e2

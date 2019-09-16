@@ -57,6 +57,7 @@ and environment = (name * expr) list
 type toplevel_cmd =
   | Expr of expr (** an expression to be evaluated *)
   | Def of name * expr (** Global definition [let x = e] *)
+  | TypeDecl of name * ty (** Global type definition [type x = ty] *)
 
 (** [string_of_kind k] converts a kind [k] to a string. *)
 let rec string_of_kind = function
