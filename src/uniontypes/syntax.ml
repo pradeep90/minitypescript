@@ -93,6 +93,7 @@ let rec string_of_value = function
   | Closure _ -> "<fun>"
   | Left (_, _, x) -> "Left " ^ (string_of_value x)
   | Right (_, _, x) -> "Right " ^ (string_of_value x)
+  | TFun _ -> "<poly-fun>"
   | _ -> assert false
 
 let rec is_value = function
@@ -103,3 +104,35 @@ let rec is_value = function
   | Left (_, _, x) -> is_value x
   | Right (_, _, x) -> is_value x
   | _ -> assert false
+
+let rec string_of_expr = function
+  | Var x -> x
+  | Int n -> string_of_int n
+  | Bool b -> string_of_bool b
+  | Fun (f, x, ty, e) ->
+     Printf.sprintf "fun %s(%s): %s is %s" f x (string_of_type ty) (string_of_expr e)
+  | TFun (name, kind, e) ->
+     Printf.sprintf "\\%s: %s. %s" name (string_of_kind kind) (string_of_expr e)
+  | Closure (_, x, e, ty) ->
+     Printf.sprintf "Closure (%s, %s, %s, %s)" "<env>" x (string_of_expr e) (string_of_type ty)
+  | App (e1, e2) ->
+     Printf.sprintf "(%s %s)" (string_of_expr e1) (string_of_expr e2)
+  | TApp (e, ty) ->
+     Printf.sprintf "%s [%s]" (string_of_expr e) (string_of_type ty)
+  | Record rs ->
+      Printf.sprintf "{%s}" (String.concat ", " (List.map (fun (l,e) -> Printf.sprintf "%s: %s" l (string_of_expr e)) rs))
+  | Plus (e1, e2) -> "(Plus TODO)"
+  | Minus (e1, e2) -> "(Minus TODO)"
+  | Times (e1, e2) -> "(Times TODO)"
+  | Divide (e1, e2) -> "(Divide TODO)"
+  | Equal (e1, e2) -> "(Equal TODO)"
+  | Less (e1, e2) -> "(Less TODO)"
+  | And (e1, e2) -> "(And TODO)"
+  | Or (e1, e2) -> "(Or TODO)"
+  | Not b -> "(Not TODO)"
+  | If (e1, e2, e3) -> "(If TODO)"
+  | Let (x, e1, e2) -> "(Let TODO)"
+  | Project (e, l) -> "(Project TODO)"
+  | Left (ty1, ty2, e) -> "(Left TODO)"
+  | Right (ty1, ty2, e) -> "(Right TODO)"
+  | Match (e, ty1, n1, e1, ty2, n2, e2) -> "(Match TODO)"
