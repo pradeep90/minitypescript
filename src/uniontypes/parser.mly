@@ -23,7 +23,7 @@
 %token AMPERSAND
 %token TYPELET TYPEFUN EXTENDS TNEVER
 %token TDISTRIBUTE
-%token TKEYOF
+%token TKEYOF TLOOKUPKEY
 
 %start toplevel
 %start file
@@ -142,6 +142,7 @@ ty:
   | ty EXTENDS ty                       { TExtends ($1, $3) }
   | ty TDISTRIBUTE ty                   { TDistribute ($1, $3) }
   | TKEYOF ty                           { TKeyof $2 }
+  | ty TLOOKUPKEY ty                    { TLookupKey ($1, $3) }
   | TYPELET VAR EQUAL ty IN ty          { TLet ($2, $4, $6) }
 
 ty_app:

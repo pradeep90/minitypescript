@@ -58,6 +58,8 @@ let rec kind_of kctx ty = match ty with
                                    kind_check kctx ty_super KStar;
                                    KArrow (KStar, KArrow (KStar, KStar))
   | TKeyof ty' -> kind_check kctx ty' KStar; KStar
+  | TLookupKey (ty1, ty2) -> kind_check kctx ty1 KStar;
+                             kind_check kctx ty2 KStar; KStar
   | TDistribute (ty1, ty_union) ->
      (match kind_of kctx ty1 with
       | KArrow (KStar, k2) -> kind_check kctx ty_union KStar; k2
@@ -212,6 +214,7 @@ and substitute_params_maybe ctx ty =
   | TApplication (ty1, ty2) -> TApplication (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
   | TExtends (ty1, ty2) -> TExtends (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
   | TKeyof ty' -> TKeyof (substitute_params_maybe ctx ty')
+  | TLookupKey (ty1, ty2) -> TLookupKey (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
   | TDistribute (ty1, ty2) -> TDistribute (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
 
 and get_stored_types env = List.concat (List.map (fun (n, e) -> match decode_type_application (n, e) with | Some p' -> [p'] | None -> []) env)
@@ -256,6 +259,17 @@ and eval_type tenv ty = match ty with
                                               | _ -> TUnion (tsl, xs))
                          xss TNever
       | _ -> type_error (Printf.sprintf "eval_type: Keyof expected a record type but got %s" (string_of_type ty_eval)))
+  | TLookupKey (ty1, ty2) ->
+     let ty1_eval = eval_type tenv ty1
+     and ty2_eval = eval_type tenv ty2
+     in
+     (match ty1_eval with
+      | TRecord xss ->
+         (match ty2_eval with
+          | TStringLiteral x -> (try List.assoc x xss with Not_found -> type_error (Printf.sprintf "LookupKey: key \"%s\" not found in record %s" x (string_of_type ty1_eval)))
+          | _ -> type_error (Printf.sprintf "eval_type: LookupKey expected a string literal but got %s" (string_of_type ty2_eval))
+         )
+      | _ -> type_error (Printf.sprintf "eval_type: LookupKey expected a record type but got %s" (string_of_type ty1_eval)))
   | TDistribute (ty1, ty_union) ->
      let ty_union' = eval_type tenv ty_union
      in

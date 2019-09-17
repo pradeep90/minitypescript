@@ -44,6 +44,7 @@ rule token = parse
   | "Never"         { TNEVER }
   | "Over"          { TDISTRIBUTE }
   | "Keyof"         { TKEYOF }
+  | "LookupKey"     { TLOOKUPKEY }
   | ";;"            { SEMICOLON2 }
   | '('             { LPAREN }
   | ')'             { RPAREN }

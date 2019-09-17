@@ -268,6 +268,15 @@ type ExcludeTypeKey = tfun f(A): * -> * is If (A extends "type") Never A;;
 type Test = ExcludeTypeKey Over ("emailAddress" | "type" | "foo");;
 # => "emailAddress" | "foo"
 
+# Lookup operator.
+
+type TestLookup = {x: int, y: bool} LookupKey "x";;
+type TestLookup = {x: int, y: bool} LookupKey "y";;
+
+# Errors:
+# type TestLookup = {x: int, y: bool} LookupKey "yoboyz";;
+# type TestLookup = {x: int, y: bool} LookupKey int;;
+# type TestLookup = int LookupKey int;;
 
 # # Mapped types.
 # type ExcludeTypeField = \A:*. MapUnionToRecord (\K:*. (K, LookupKey A K)) (ExcludeTypeKey (keyof A));;
