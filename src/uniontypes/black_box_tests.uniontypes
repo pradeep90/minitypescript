@@ -1,0 +1,274 @@
+# Basic function.
+let increment = fun f(x): int -> int is x + 1
+
+
+
+
+# Polymorphic function.
+
+let compose = \A:*. \B:*. \C:*.
+    fun f1(f): (B -> C) -> (A -> B) -> (A -> C) is
+    	fun f2(g): (A -> B) -> A -> C is
+    	    fun f3(x): A -> C is
+	    	f (g x)
+;;
+
+let incrementByTwo = compose [int] [int] [int] increment increment;;
+incrementByTwo 3;;
+# => 5
+
+let id = \A:* . fun f(x): A -> A is x;;
+
+id [int] 3;;
+id [bool] true;;
+id [{a: int}] {a : 1};;
+id [forall A:*. A -> A] id;;
+
+let const = \A:*. \B:*. fun f(x): A -> B -> A is fun g(y): B -> A is x;;
+const [int] [int] 1 2;;
+const [bool] [int] true 3;;
+const [int] [forall A:*. A -> A] 7 id;;
+
+let fxx = fun f1(x): (forall A:*. A -> A) -> (forall B:*. B -> B) is x [forall C:*. C -> C] x;;
+fxx id;;
+
+# Lexical binding.
+# Should be 3, not 4.
+let z = 3 in
+    let lexical_fun = \A: *. fun f(x): A -> int is z in
+    	let z = 4 in
+	    lexical_fun [int] 0
+;;
+
+
+
+
+# Union types.
+
+let incrementOrZero = fun f(x): (int | bool) -> int is
+    match x with
+    | int as y -> y + 1
+    | bool as y -> 0
+;;
+
+let z = incrementOrZero 3;;
+# => 4
+let z = incrementOrZero true;;
+let x = Left [int] [bool] 3 in incrementOrZero x;;
+let y = Right [int] [bool] true in incrementOrZero y;;
+
+let test_evaluation_of_left = let baz = 8 in let z = Left [int] [bool] (baz + 1) in let baz = 3 in match z with | int as z1 -> z1 | bool as z2 -> 0;;
+
+let increaseNumber = fun f(x): int -> ({add: int, multiply: int} | int) -> int is
+    fun g(method): ({add: int, multiply: int} | int) -> int is
+    	match method with
+	| {add: int, multiply: int} as method -> (x + method.add) * method.multiply
+	| int as method -> (x + method)
+;;
+
+increaseNumber 7 (Left [{add: int, multiply: int}] [int] {add: 4, multiply: 10});;
+increaseNumber 7 (Right [{add: int, multiply: int}] [int] 8);;
+
+let z = increaseNumber 10 3;;
+let z = increaseNumber 10 {add: 1, multiply: 9};;
+
+let applyUnionFn = fun f1(f): ((int -> int) | (bool -> int)) -> int is
+    match f with
+    | (int -> int) as g -> (g 2)
+    | (bool -> int) as h -> (h true)
+;;
+
+let boolToInt = fun f(x): bool -> int is if x then 1 else 0;;
+
+applyUnionFn (Left [int -> int] [bool -> int] increment);;
+applyUnionFn (Right [int -> int] [bool -> int] boolToInt);;
+applyUnionFn increment;;
+applyUnionFn boolToInt;;
+
+
+
+
+# Intersection type.
+
+
+let zeroMinusX = fun f(x): int -> int is 0-x;;
+let toggle = fun f(x): bool -> bool is if x then false else true;;
+
+let negate = zeroMinusX & toggle;;
+# => (int -> int) & (bool -> bool)
+
+negate true;;
+# => false
+negate 7;;
+# => -7
+
+negate (negate true);;
+toggle (negate true);;
+# Error:
+# addThree (negate true);;
+
+let barFn = increment & boolToInt;;
+let bazFn = increment & toggle;;
+
+let addThree = fun f(x): int -> int is x + 3;;
+barFn (Left [int] [bool] 7);;
+barFn (Right [int] [bool] true);;
+bazFn (Left [int] [bool] 7);;
+bazFn (Right [int] [bool] true);;
+# Error:
+# bazFn (Right [bool] [bool] true);;
+
+barFn 7;;
+barFn true;;
+
+let test = (addThree & increment) 7;;
+
+# Typecheck recursively.
+((toggle & toggle) & (toggle & increment)) 7;;
+(toggle & toggle) & (toggle & (toggle & increment)) 7;;
+((toggle & toggle) & (toggle & (toggle & increment))) (Right [bool] [int] 7);;
+{fst: {fst: toggle, snd: toggle}, snd: {fst: toggle, snd: {fst: toggle, snd: increment}}} (Right [bool] [int] 7);;
+
+let g = fun g(x): (int | bool) -> (int | bool) is negate x
+;;
+
+# Should be (int | bool).
+g (Left [int] [bool] 7);;
+g (Right [int] [bool] true);;
+g 7;;
+g true;;
+
+# Record containing polymorphic function applied to concrete types.
+let testPolymorphic = (incrementByTwo & toggle) 8;;
+
+# Match on polymorphic types.
+let foo = \A: *. fun f1(f): ((A -> A) | A) -> A -> A is
+    fun g(x): A -> A is
+    	match f with
+	| (A -> A) as f2 -> (f2 x)
+	| A as y -> y
+;;
+let bar = foo [int] increment 2;;
+let bar = foo [int] 4 2;;
+
+
+
+
+# Type-let.
+let foo = fun f(x): (type Foo = int in Foo -> Foo) is x + 3;;
+foo 7;;
+id [type Bar = int in Bar] 3;;
+match foo with | (type Bar = int in Bar -> Bar) as g -> g 3 | int as x -> x;;
+Left [type Baz = int in Baz -> Baz] [type Baz = bool in Baz -> Baz] increment;;
+
+# Errors.
+# id [type Bar = int in Bar -> Bar] toggle;;
+# let foo = fun f(x): (type Foo = bool in Foo -> Foo) is x + 3;;
+# let foo = fun f(x): (type Foo = int in Foo) is x + 3;;
+
+type Bar = int;;
+id [Bar -> Bar] increment;;
+id [Bar] 3;;
+let bar = fun g(x): (Bar -> Bar) is x + 3;;
+bar 19;;
+Left [Bar -> Bar] [Bar -> Bar] increment;;
+match bar with | (Bar -> Bar) as g -> g 3 | Bar as x -> x;;
+
+# Errors.
+# Left [Bar -> Bar] [Bar -> Bar] toggle;;
+
+
+
+
+# Higher-Order Types.
+type Id = tfun f(A): * -> * is A;;
+type Const = tfun f(A): * -> * -> * is tfun g(B): * -> * is A;;
+
+# Error.
+# type Const = tfun f(A): * -> * is tfun g(B): * -> * is A;;
+
+
+
+
+# Higher-Order Type application.
+type IdInt = Id int;;
+type ConstIntBool = Const int bool;;
+type ConstInt = Const int;;
+type ConstIntBoolTwo = ConstInt bool;;
+type Foo = forall A:*. Const int A;;
+type Bar = forall A:*. Const A int;;
+id [IdInt] 3;;
+id [ConstIntBoolTwo] 3;;
+
+# Errors.
+# type IdInt = Id int bool;;
+# type ConstIntBool = Const int bool int;;
+
+# Errors: Only base kinds are allowed for arrows, unions, and intersections.
+# type Foo = Const -> Id;;
+# type Foo = {x: Const, y: Id};;
+# type Foo = Const | Id;;
+# type Foo = Const & Id;;
+
+type Lion = {tail_length: int, meow_loudness: int};;
+type Tiger = {tail_length: int, meow_loudness: int};;
+type Zebra = {tail_length: int, num_stripes: int};;
+type Shark = {num_fins: int, num_gills: int};;
+type Animal = Lion | Zebra | Tiger | Shark;;
+
+# If type-operator.
+type True = tfun f(T): * -> * -> * is tfun g(F): * -> * is T;;
+type False = tfun f(T): * -> * -> * is tfun g(F): * -> * is F;;
+type If = tfun f(B): (* -> * -> *) -> * -> * -> * is tfun g(T): * -> * -> * is tfun h(F): * -> * is B T F;;
+type Not = tfun f(B): (* -> * -> *) -> * -> * -> * is tfun g(T): * -> * -> * is tfun h(F): * -> * is B F T;;
+type Foo = If False Lion Zebra;;
+type TryNot = If (Not False) Lion Zebra;;
+type TryNot = If (Not True) Lion Zebra;;
+type TypeExtends = (Lion extends {tail_length: int});;
+type Foo = If (Lion extends {tail_length: int}) Lion Tiger;;
+type Foo = If (Lion extends {tail_length: int}) Lion Never;;
+
+
+
+# Never.
+let tryNever = fun f(x): Never -> int is 3;;
+# Will give an error.
+# tryNever 7;;
+
+
+
+
+# Conditional types.
+type ExtractCat = tfun f(A): * -> * is If (A extends { meow_loudness: int }) A Never;;
+type ExtractNonCat = tfun f(A): * -> * is If (Not (A extends { meow_loudness: int })) A Never;;
+type Test = If (Animal extends { meow_loudness: int }) Animal Never;;
+# => Never
+type Cat = ExtractCat Over Animal;;
+# => Lion | Tiger
+type NonCat = ExtractNonCat Over Animal;;
+# => Zebra | Shark
+
+# type ExcludeTypeKey = tfun f(A): * -> * is If (A extends "type") then Never else A;;
+# type Test = ExcludeTypeKey ("emailAddress" | "type" | "foo");;
+# // => "emailAddress" | "foo"
+
+# # Mapped types.
+# type ExcludeTypeField = \A:*. MapUnionToRecord (\K:*. (K, LookupKey A K)) (ExcludeTypeKey (keyof A));;
+
+# type Test = ExcludeTypeField { type: "LOG_IN", area_code: int, is_premium: bool};;
+# // => { area_code: int, is_premium: bool }
+
+# # Only common attributes are fine.
+# let canLayEgg = fun f(animal): {wingSpan: int, canLayEgg: bool} | {finLength: int, canLayEgg: bool} -> bool is
+#     animal.canLayEgg
+
+# # Error: animal.wingSpan
+
+# # TODO: ADT.
+
+# data MaybeInt = JustInt int | NothingInt
+
+# data Maybe = Just a | Nothing
+
+# # Can't do recursive types yet.
+# # data Nat = Succ Nat | Zero
