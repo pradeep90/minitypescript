@@ -259,6 +259,10 @@ id ["foo" | "bar"] "bar";;
 # id ["foo"] "food";;
 # id ["foo"] "  foo";;
 
+# Keyof operator.
+
+type CarKeys = Keyof {top_speed: int, is_convertible: bool, year: int};;
+
 # type ExcludeTypeKey = tfun f(A): * -> * is If (A extends "type") then Never else A;;
 # type Test = ExcludeTypeKey ("emailAddress" | "type" | "foo");;
 # // => "emailAddress" | "foo"

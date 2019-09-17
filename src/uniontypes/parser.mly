@@ -23,6 +23,7 @@
 %token AMPERSAND
 %token TYPELET TYPEFUN EXTENDS TNEVER
 %token TDISTRIBUTE
+%token TKEYOF
 
 %start toplevel
 %start file
@@ -140,6 +141,7 @@ ty:
   | ty AMPERSAND ty                     { TRecord [("fst", $1); ("snd", $3)] }
   | ty EXTENDS ty                       { TExtends ($1, $3) }
   | ty TDISTRIBUTE ty                   { TDistribute ($1, $3) }
+  | TKEYOF ty                           { TKeyof $2 }
   | TYPELET VAR EQUAL ty IN ty          { TLet ($2, $4, $6) }
 
 ty_app:

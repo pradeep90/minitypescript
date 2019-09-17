@@ -43,6 +43,7 @@ rule token = parse
   | "extends"       { EXTENDS }
   | "Never"         { TNEVER }
   | "Over"          { TDISTRIBUTE }
+  | "Keyof"         { TKEYOF }
   | ";;"            { SEMICOLON2 }
   | '('             { LPAREN }
   | ')'             { RPAREN }
