@@ -250,7 +250,7 @@ and eval_type tenv ty = match ty with
      let ty_eval = eval_type tenv ty' in
      (match ty_eval with
       | TRecord xss -> List.fold_right
-                         (fun (l, e) xs -> let tsl = TStringLiteral ("\"" ^ l ^ "\"")
+                         (fun (l, e) xs -> let tsl = TStringLiteral l
                                            in match xs with
                                               | TNever -> tsl
                                               | _ -> TUnion (tsl, xs))

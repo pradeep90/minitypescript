@@ -83,7 +83,7 @@ let string_of_type ty =
 	| TInt -> (4, "int")
 	| TBool -> (4, "bool")
         | TNever -> (4, "Never")
-        | TStringLiteral x -> (4, x)
+        | TStringLiteral x -> (4, "\"" ^ x ^ "\"")
 	| TRecord ts ->
 	    (4, "{" ^
 	       String.concat ", "
@@ -117,7 +117,7 @@ let rec string_of_value = function
   | Left (_, _, x) -> "Left " ^ (string_of_value x)
   | Right (_, _, x) -> "Right " ^ (string_of_value x)
   | TFun _ -> "<poly-fun>"
-  | StringLiteral x -> x
+  | StringLiteral x -> "\"" ^ x ^ "\""
   | _ -> assert false
 
 let rec is_value = function
@@ -132,7 +132,7 @@ let rec is_value = function
 let rec string_of_expr = function
   | Var x -> x
   | Int n -> string_of_int n
-  | StringLiteral x -> x
+  | StringLiteral x -> "\"" ^ x ^ "\""
   | Bool b -> string_of_bool b
   | Fun (f, x, ty, e) ->
      Printf.sprintf "fun %s(%s): %s is %s" f x (string_of_type ty) (string_of_expr e)
