@@ -31,6 +31,7 @@ let false_type_operator = TAbstraction ("f", "T", KArrow (KStar, KArrow (KStar, 
 let rec kind_of kctx ty = match ty with
   | TParam x -> (try List.assoc x kctx with Not_found -> type_error ("unknown type parameter " ^ x))
   | TInt
+  | TStringLiteral _
   | TBool -> KStar
   | TNever -> KStar
   | TArrow (ty1, ty2) -> kind_check kctx ty1 KStar;
@@ -68,6 +69,7 @@ and kind_check kctx ty kind =
 (** [type_of ctx e] returns the type of [e] in context [ctx]. *)
 let rec type_of ctx = function
     Var x -> lookup_type x ctx
+  | StringLiteral x -> TStringLiteral x
   | Int _ -> TInt
   | Plus (e1, e2)
   | Minus (e1, e2)
@@ -196,7 +198,7 @@ and matching_function_type ty_arg ty =
    their definitions from [ctx], if available. *)
 and substitute_params_maybe ctx ty =
   match ty with
-  | TInt | TBool | TNever -> ty
+  | TInt | TBool | TNever | TStringLiteral _ -> ty
   | TParam name -> (try List.assoc name ctx with Not_found -> ty)
   | TArrow (ty_in, ty_out) -> TArrow (substitute_params_maybe ctx ty_in, substitute_params_maybe ctx ty_out)
   | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, substitute_params_maybe ctx ty')) tss)
@@ -219,7 +221,7 @@ and decode_type_application (name, e_ty) = (match e_ty with
                                            )
 
 and eval_type tenv ty = match ty with
-  | TInt | TBool | TNever -> ty
+  | TInt | TBool | TNever | TStringLiteral _ -> ty
   | TParam name -> (try List.assoc name tenv with Not_found -> ty)
   | TArrow (ty_in, ty_out) -> TArrow (eval_type tenv ty_in, eval_type tenv ty_out)
   | TRecord tss -> TRecord (List.map (fun (l, ty') -> (l, eval_type tenv ty')) tss)

@@ -17,6 +17,7 @@ rule token = parse
   | '\n'            { incr_linenum lexbuf; token lexbuf }
   | [' ' '\t']      { token lexbuf }
   | ['0'-'9']+      { INT (int_of_string(lexeme lexbuf)) }
+  | '"' var '"'  { STRING (lexeme lexbuf) }
   | "and"           { AND }
   | "bool"          { TBOOL }
   | "else"          { ELSE }

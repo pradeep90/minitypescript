@@ -16,6 +16,7 @@ type ty =
   | TNever (** Type for which nothing is a subtype [Never] *)
   | TInt (** integers [int] *)
   | TBool (** boolean values [bool] *)
+  | TStringLiteral of name (** string literal type ["foo"] *)
   | TArrow of ty * ty (** function types [ty1 -> ty2] *)
   | TRecord of (label * ty) list (** records [{l1:ty1, ..., lN:tyN}] *)
   | TParam of name (** type parameter like in [Container A] *)
@@ -32,6 +33,7 @@ and type_environment = (name * ty) list
 (** Expressions *)
 type expr =
   | Var of name (** variable *)
+  | StringLiteral of name (** string literal ["foo"] *)
   | Int of int (** integer constant *)
   | Plus of expr * expr (** sum [e1 + e2] *)
   | Minus of expr * expr (** difference [e1 - e2] *)
@@ -80,6 +82,7 @@ let string_of_type ty =
 	| TInt -> (4, "int")
 	| TBool -> (4, "bool")
         | TNever -> (4, "Never")
+        | TStringLiteral x -> (4, x)
 	| TRecord ts ->
 	    (4, "{" ^
 	       String.concat ", "
@@ -112,6 +115,7 @@ let rec string_of_value = function
   | Left (_, _, x) -> "Left " ^ (string_of_value x)
   | Right (_, _, x) -> "Right " ^ (string_of_value x)
   | TFun _ -> "<poly-fun>"
+  | StringLiteral x -> x
   | _ -> assert false
 
 let rec is_value = function
@@ -126,6 +130,7 @@ let rec is_value = function
 let rec string_of_expr = function
   | Var x -> x
   | Int n -> string_of_int n
+  | StringLiteral x -> x
   | Bool b -> string_of_bool b
   | Fun (f, x, ty, e) ->
      Printf.sprintf "fun %s(%s): %s is %s" f x (string_of_type ty) (string_of_expr e)

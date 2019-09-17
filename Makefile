@@ -60,6 +60,10 @@ example_systemf:
 example_uniontypes:
 	./uniontypes.native $(SRCDIR)/uniontypes/example.uniontypes
 
+.PHONY: black_box_tests_uniontypes
+black_box_tests_uniontypes:
+	./uniontypes.native $(SRCDIR)/uniontypes/black_box_tests.uniontypes
+
 .PHONY: example_fomega
 example_fomega:
 	./fomega.native $(SRCDIR)/fomega/example.fomega

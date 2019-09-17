@@ -14,6 +14,7 @@ let lookup_value x env =
 (** [eval env e] evaluates expression [e] in environment [env]. *)
 let rec eval env = function
   | Var x -> lookup_value x env
+  | StringLiteral _ as e -> e
   | Int _ as e -> e
   | Plus (e1, e2) ->
       (match eval env e1, eval env e2 with

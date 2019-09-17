@@ -7,6 +7,7 @@
 %token COLON COMMA PERIOD
 %token <Syntax.name> VAR
 %token <int> INT
+%token <Syntax.name> STRING
 %token PLUS MINUS TIMES DIVIDE
 %token TRUE FALSE
 %token EQUAL LESS
@@ -102,6 +103,7 @@ non_app:
   | TRUE                	  { Bool true }
   | FALSE               	  { Bool false }
   | INT		                  { Int $1 }
+  | STRING		          { StringLiteral $1 }
   | LPAREN expr RPAREN		  { $2 }
   | LBRACE RBRACE               { Record [] }
   | LBRACE record_list RBRACE   { Record $2 }
@@ -149,6 +151,7 @@ ty_non_app:
   | TBOOL                               { TBool }
   | TINT                                { TInt }
   | TNEVER                              { TNever }
+  | STRING                              { TStringLiteral $1 }
   | VAR                                 { TParam $1 }
   | LBRACE RBRACE                       { TRecord [] }
   | LBRACE trecord_list RBRACE          { TRecord $2 }
