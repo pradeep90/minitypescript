@@ -270,17 +270,17 @@ type Test = ExcludeUserTypeKey Over ("emailAddress" | "user_type" | "foo");;
 
 # Lookup operator.
 
-type TestLookup = {x: int, y: bool} LookupKey "x";;
-type TestLookup = {x: int, y: bool} LookupKey "y";;
+type TestLookup = {x: int, y: bool}["x"];;
+type TestLookup = {x: int, y: bool}["y"];;
 
 # Errors:
-# type TestLookup = {x: int, y: bool} LookupKey "yoboyz";;
-# type TestLookup = {x: int, y: bool} LookupKey int;;
-# type TestLookup = int LookupKey int;;
+# type TestLookup = {x: int, y: bool}["yoboyz"];;
+# type TestLookup = {x: int, y: bool}[int];;
+# type TestLookup = int[int];;
 
 # Mapped types.
 type ExcludeUserTypeField = tfun f(A): * -> * is
-     (MapUnionToRecord {(tfun key(K): * -> * is K): (tfun valueType(K): * -> * is (A LookupKey K))} (ExcludeUserTypeKey Over (Keyof A)));;
+     (MapUnionToRecord {(tfun key(K): * -> * is K): (tfun valueType(K): * -> * is (A[K]))} (ExcludeUserTypeKey Over (Keyof A)));;
 
 type Test = ExcludeUserTypeField { user_type: "LOGGED_IN", area_code: int, is_premium: bool };;
 # => { area_code: int, is_premium: bool }

@@ -142,7 +142,7 @@ ty:
   | ty EXTENDS ty                       { TExtends ($1, $3) }
   | ty TDISTRIBUTE ty                   { TDistribute ($1, $3) }
   | TKEYOF ty                           { TKeyof $2 }
-  | ty TLOOKUPKEY ty                    { TLookupKey ($1, $3) }
+  | ty LSQUARE ty RSQUARE               { TLookupKey ($1, $3) }
   | TMAPUNIONTORECORD LBRACE ty COLON ty RBRACE ty          { TMapUnionToRecord ($3, $5, $7) }
   | TYPELET VAR EQUAL ty IN ty          { TLet ($2, $4, $6) }
 

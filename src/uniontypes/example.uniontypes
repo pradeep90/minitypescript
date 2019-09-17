@@ -13,7 +13,7 @@ let z = incrementOrZero true;;
 
 
 
-# Intersection type.
+# Intersection types.
 
 
 let zeroMinusX = fun f(x): int -> int is (0 - x);;
@@ -112,7 +112,7 @@ type Test = ExcludeUserTypeKey Over ("emailAddress" | "user_type" | "foo");;
 
 # Remove the user_type field from the record.
 type ExcludeUserTypeField = tfun f(A): * -> * is
-     (MapUnionToRecord {(tfun key(K): * -> * is K): (tfun valueType(K): * -> * is (A LookupKey K))} (ExcludeUserTypeKey Over (Keyof A)));;
+     (MapUnionToRecord {(tfun key(K): * -> * is K): (tfun valueType(K): * -> * is (A[K]))} (ExcludeUserTypeKey Over (Keyof A)));;
 
 type Test = ExcludeUserTypeField { user_type: "LOGGED_IN", area_code: int, is_premium: bool };;
 # => { area_code: int, is_premium: bool }
