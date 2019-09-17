@@ -278,9 +278,10 @@ type TestLookup = {x: int, y: bool}["y"];;
 # type TestLookup = {x: int, y: bool}[int];;
 # type TestLookup = int[int];;
 
-# Mapped types.
+# Remove the user_type field from the record.
 type ExcludeUserTypeField = tfun f(A): * -> * is
-     (MapUnionToRecord {(tfun key(K): * -> * is K): (tfun valueType(K): * -> * is (A[K]))} (ExcludeUserTypeKey Over (Keyof A)));;
+     (MapUnionToRecord {(tfun k(K): * -> * is K): (tfun v(K): * -> * is A[K])}
+     		       (ExcludeUserTypeKey Over (Keyof A)));;
 
 type Test = ExcludeUserTypeField { user_type: "LOGGED_IN", area_code: int, is_premium: bool };;
 # => { area_code: int, is_premium: bool }
