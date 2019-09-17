@@ -45,6 +45,7 @@ rule token = parse
   | "Over"          { TDISTRIBUTE }
   | "Keyof"         { TKEYOF }
   | "LookupKey"     { TLOOKUPKEY }
+  | "MapUnionToRecord"  { TMAPUNIONTORECORD }
   | ";;"            { SEMICOLON2 }
   | '('             { LPAREN }
   | ')'             { RPAREN }

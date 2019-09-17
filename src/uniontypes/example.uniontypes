@@ -100,3 +100,19 @@ type Cat = ExtractCat Over Animal;;
 
 type NonCat = ExtractNonCat Over Animal;;
 # => Zebra | Shark
+
+
+
+
+# Mapped types.
+
+type ExcludeUserTypeKey = tfun f(A): * -> * is If (A extends "user_type") Never A;;
+type Test = ExcludeUserTypeKey Over ("emailAddress" | "user_type" | "foo");;
+# => "emailAddress" | "foo"
+
+# Remove the user_type field from the record.
+type ExcludeUserTypeField = tfun f(A): * -> * is
+     (MapUnionToRecord {(tfun key(K): * -> * is K): (tfun valueType(K): * -> * is (A LookupKey K))} (ExcludeUserTypeKey Over (Keyof A)));;
+
+type Test = ExcludeUserTypeField { user_type: "LOGGED_IN", area_code: int, is_premium: bool };;
+# => { area_code: int, is_premium: bool }

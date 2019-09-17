@@ -60,6 +60,11 @@ let rec kind_of kctx ty = match ty with
   | TKeyof ty' -> kind_check kctx ty' KStar; KStar
   | TLookupKey (ty1, ty2) -> kind_check kctx ty1 KStar;
                              kind_check kctx ty2 KStar; KStar
+  | TMapUnionToRecord (ty_key, ty_value, ty_union) ->
+     kind_check kctx ty_key (KArrow (KStar, KStar));
+     kind_check kctx ty_value (KArrow (KStar, KStar));
+     kind_check kctx ty_union KStar;
+     KStar
   | TDistribute (ty1, ty_union) ->
      (match kind_of kctx ty1 with
       | KArrow (KStar, k2) -> kind_check kctx ty_union KStar; k2
@@ -215,6 +220,7 @@ and substitute_params_maybe ctx ty =
   | TExtends (ty1, ty2) -> TExtends (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
   | TKeyof ty' -> TKeyof (substitute_params_maybe ctx ty')
   | TLookupKey (ty1, ty2) -> TLookupKey (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
+  | TMapUnionToRecord (ty_key, ty_value, ty_union) -> TMapUnionToRecord (substitute_params_maybe ctx ty_key, substitute_params_maybe ctx ty_value, substitute_params_maybe ctx ty_union)
   | TDistribute (ty1, ty2) -> TDistribute (substitute_params_maybe ctx ty1, substitute_params_maybe ctx ty2)
 
 and get_stored_types env = List.concat (List.map (fun (n, e) -> match decode_type_application (n, e) with | Some p' -> [p'] | None -> []) env)
@@ -224,6 +230,14 @@ and decode_type_application (name, e_ty) = (match e_ty with
                                             | Closure ([], "hack_to_store_type", Var "dummy", ty) -> Some (name, ty)
                                             | _ -> None
                                            )
+
+and union_to_list = function
+  | TUnion (ty1, ty2) -> union_to_list ty1 @ union_to_list ty2
+  | _ as ty -> [ty]
+
+and extract_string_literal = function
+  | TStringLiteral x -> x
+  | _ as ty -> type_error ("extract_string_literal: expected string literal, but got " ^ string_of_type ty)
 
 and eval_type tenv ty = match ty with
   | TInt | TBool | TNever | TStringLiteral _ -> ty
@@ -270,6 +284,16 @@ and eval_type tenv ty = match ty with
           | _ -> type_error (Printf.sprintf "eval_type: LookupKey expected a string literal but got %s" (string_of_type ty2_eval))
          )
       | _ -> type_error (Printf.sprintf "eval_type: LookupKey expected a record type but got %s" (string_of_type ty1_eval)))
+  | TMapUnionToRecord (ty_key_fn, ty_value_fn, ty_union) ->
+     let ty_key_fn' = eval_type tenv ty_key_fn
+     and ty_value_fn' = eval_type tenv ty_value_fn
+     and ty_union' = eval_type tenv ty_union
+     in
+     TRecord (List.map (fun ty_k ->
+                  (extract_string_literal
+                     (eval_type tenv (TApplication (ty_key_fn', ty_k))),
+                   eval_type tenv (TApplication (ty_value_fn', ty_k))))
+                (union_to_list ty_union'))
   | TDistribute (ty1, ty_union) ->
      let ty_union' = eval_type tenv ty_union
      in

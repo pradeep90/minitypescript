@@ -28,7 +28,8 @@ type ty =
   | TApplication of ty * ty (** type application [Foo int] *)
   | TExtends of ty * ty (** type predicate about subtype [Extends {x: int, y: bool} {x: int}] *)
   | TKeyof of ty (** Keys of record type [Keyof {x: int, y: bool} => "x" | "y"] *)
-  | TLookupKey of ty * ty (** Lookup  of record type [Keyof {x: int, y: bool} => "x" | "y"] *)
+  | TLookupKey of ty * ty (** Lookup of record type [Keyof {x: int, y: bool} => "x" | "y"] *)
+  | TMapUnionToRecord of ty * ty * ty (** Map union to record type [MapUnionToRecord F1 F2 {x: int, y: bool} => {x: bool, y: bool}] *)
   | TDistribute of ty * ty (** distribute an operator over a union [Distribute (Const int) (A | B)] *)
 and type_environment = (name * ty) list
 
@@ -101,6 +102,7 @@ let string_of_type ty =
         | TExtends (ty1, ty2) -> (4, Printf.sprintf "(%s extends %s)" (to_str 0 ty1) (to_str 0 ty2))
         | TKeyof ty -> (4, Printf.sprintf "(Keyof %s)" (to_str 0 ty))
         | TLookupKey (ty1, ty2) -> (4, Printf.sprintf "(%s LookupKey %s)" (to_str 0 ty1) (to_str 0 ty2))
+        | TMapUnionToRecord (ty_key, ty_value, ty_union) -> (4, Printf.sprintf "(MapUnionToRecord {%s: %s} %s)" (to_str 0 ty_key) (to_str 0 ty_value) (to_str 0 ty_union))
         | TDistribute (ty1, ty2) -> (4, Printf.sprintf "(Distribute %s %s)" (to_str 0 ty1) (to_str 0 ty2))
     in
       if m > n then str else "(" ^ str ^ ")"

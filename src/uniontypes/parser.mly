@@ -23,7 +23,7 @@
 %token AMPERSAND
 %token TYPELET TYPEFUN EXTENDS TNEVER
 %token TDISTRIBUTE
-%token TKEYOF TLOOKUPKEY
+%token TKEYOF TLOOKUPKEY TMAPUNIONTORECORD
 
 %start toplevel
 %start file
@@ -143,6 +143,7 @@ ty:
   | ty TDISTRIBUTE ty                   { TDistribute ($1, $3) }
   | TKEYOF ty                           { TKeyof $2 }
   | ty TLOOKUPKEY ty                    { TLookupKey ($1, $3) }
+  | TMAPUNIONTORECORD LBRACE ty COLON ty RBRACE ty          { TMapUnionToRecord ($3, $5, $7) }
   | TYPELET VAR EQUAL ty IN ty          { TLet ($2, $4, $6) }
 
 ty_app:

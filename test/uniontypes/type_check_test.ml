@@ -149,6 +149,13 @@ let test_fixture = "type_check" >:::
     assert_equal (TForAll ("Bar", KStar, TInt)) (substitute_params_maybe [("Foo", TInt)] (TForAll ("Bar", KStar, TParam "Foo")));
     assert_equal (TForAll ("Foo", KStar, TParam "Foo")) (substitute_params_maybe [("Foo", TInt)] (TForAll ("Foo", KStar, TParam "Foo")));
   );
+
+
+  "union_to_list" >:: ( fun () ->
+    assert_equal [TInt; TBool; TBool] (union_to_list (TUnion (TUnion (TInt, TBool), TBool)));
+    assert_equal [TInt] (union_to_list TInt);
+  );
+
 ]
 
 (* Test Runner; ~verbose:true gives info on succ tests *)

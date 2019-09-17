@@ -264,8 +264,8 @@ id ["foo" | "bar"] "bar";;
 type CarKeys = Keyof {top_speed: int, is_convertible: bool, year: int};;
 # => ("top_speed" | ("is_convertible" | "year"))
 
-type ExcludeTypeKey = tfun f(A): * -> * is If (A extends "type") Never A;;
-type Test = ExcludeTypeKey Over ("emailAddress" | "type" | "foo");;
+type ExcludeUserTypeKey = tfun f(A): * -> * is If (A extends "user_type") Never A;;
+type Test = ExcludeUserTypeKey Over ("emailAddress" | "user_type" | "foo");;
 # => "emailAddress" | "foo"
 
 # Lookup operator.
@@ -278,11 +278,12 @@ type TestLookup = {x: int, y: bool} LookupKey "y";;
 # type TestLookup = {x: int, y: bool} LookupKey int;;
 # type TestLookup = int LookupKey int;;
 
-# # Mapped types.
-# type ExcludeTypeField = \A:*. MapUnionToRecord (\K:*. (K, LookupKey A K)) (ExcludeTypeKey (keyof A));;
+# Mapped types.
+type ExcludeUserTypeField = tfun f(A): * -> * is
+     (MapUnionToRecord {(tfun key(K): * -> * is K): (tfun valueType(K): * -> * is (A LookupKey K))} (ExcludeUserTypeKey Over (Keyof A)));;
 
-# type Test = ExcludeTypeField { type: "LOG_IN", area_code: int, is_premium: bool};;
-# // => { area_code: int, is_premium: bool }
+type Test = ExcludeUserTypeField { user_type: "LOGGED_IN", area_code: int, is_premium: bool };;
+# => { area_code: int, is_premium: bool }
 
 # # Only common attributes are fine.
 # let canLayEgg = fun f(animal): {wingSpan: int, canLayEgg: bool} | {finLength: int, canLayEgg: bool} -> bool is
