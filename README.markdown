@@ -1,10 +1,10 @@
-MiniTypescript implements parametric polymorphism along with conditional and mapped types on top of STLC.
+MiniTypeScript implements parametric polymorphism on top of STLC along with union types, intersection types, distributive conditional types, and mapped types.
 
 This project is built on top of the [PL Zoo](http://plzoo.andrej.com/) mini-language framework.
 
 # Examples
 
-## Union types.
+## Union types
 
 ```ml
 let incrementOrZero = fun f(x): (int | bool) -> int is
@@ -19,7 +19,7 @@ let z = incrementOrZero true;;
 # => 0
 ```
 
-## Intersection types.
+## Intersection types
 
 ```ml
 let zeroMinusX = fun f(x): int -> int is (0 - x);;
@@ -38,21 +38,9 @@ negate 7;;
 negate (negate true);;
 toggle (negate true);;
 let toggle = fun f(x): bool -> bool is (if x then false else true);;
-
-let negate = zeroMinusX & toggle;;
-# => (int -> int) & (bool -> bool)
-
-negate true;;
-# => false
-
-negate 7;;
-# => -7
-
-negate (negate true);;
-toggle (negate true);;
 ```
 
-## Higher-Order Types.
+## Higher-Order Types
 
 ```ml
 type Id = tfun f(A): * -> * is A;;
@@ -67,7 +55,7 @@ id [ConstIntBool] 3;;
 # type: int
 ```
 
-## If type-operator (using Church encoding).
+## If type-operator (using Church encoding)
 
 ```ml
 type True = tfun f(T): * -> * -> * is
@@ -108,7 +96,7 @@ let tryNever = fun f(x): Never -> int is 3;;
 # tryNever 7;;
 ```
 
-## Distributive Conditional types.
+## Distributive Conditional types
 
 ```ml
 type ExtractCat = tfun f(A): * -> * is If (A extends { meow_loudness: int }) A Never;;
@@ -121,7 +109,7 @@ type NonCat = ExtractNonCat Over Animal;;
 # => Zebra | Shark
 ```
 
-## Mapped types.
+## Mapped types
 
 ```ml
 type ExcludeKey = tfun f(K): * -> * -> * is
@@ -140,3 +128,9 @@ type ExcludeUserTypeField = tfun f(A): * -> * is
 
 type Test = ExcludeUserTypeField { user_type: "LOGGED_IN", area_code: int, is_premium: bool };;
 # => { area_code: int, is_premium: bool }
+
+# Code
+
+The code for System F is in `src/systemf`.
+
+The code for MiniTypeScript is in `src/uniontypes`.
