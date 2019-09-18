@@ -2,7 +2,7 @@ MiniTypeScript implements parametric polymorphism on top of STLC along with unio
 
 This project is built on top of the [PL Zoo](http://plzoo.andrej.com/) mini-language framework.
 
-# Examples
+# Features
 
 ## Union types
 
@@ -21,8 +21,9 @@ let z = incrementOrZero true;;
 
 ## Intersection types
 
+Use case: Say we want the return type of a function to be specific even though the input type is a union. `negate true` should return `bool`, not `int | bool`, and `negate 7` should return `int`, not `int | bool`.
+
 ```ml
-let zeroMinusX = fun f(x): int -> int is (0 - x);;
 let zeroMinusX = fun f(x): int -> int is (0 - x);;
 let toggle = fun f(x): bool -> bool is (if x then false else true);;
 
@@ -36,8 +37,10 @@ negate 7;;
 # => -7
 
 negate (negate true);;
+# => true
 toggle (negate true);;
-let toggle = fun f(x): bool -> bool is (if x then false else true);;
+# No need to pattern-match since the return type is bool.
+# => true
 ```
 
 ## Higher-Order Types
@@ -47,15 +50,17 @@ type Id = tfun f(A): * -> * is A;;
 type Const = tfun f(A): * -> * -> * is tfun g(B): * -> * is A;;
 
 type IdInt = Id int;;
+# type: int
 type ConstIntBool = Const int bool;;
+# type: int
+
 let id = \A:* . fun f(x): A -> A is x;;
 
 id [IdInt] 3;;
 id [ConstIntBool] 3;;
-# type: int
 ```
 
-## If type-operator (using Church encoding)
+## If Type-operator (using Church encoding)
 
 ```ml
 type True = tfun f(T): * -> * -> * is
@@ -75,7 +80,6 @@ type Lion = {tail_length: int, meow_loudness: int};;
 type Tiger = {tail_length: int, meow_loudness: int};;
 type Zebra = {tail_length: int, num_stripes: int};;
 type Shark = {num_fins: int, num_gills: int};;
-type Animal = Lion | Zebra | Tiger | Shark;;
 
 type Foo = If False Lion Zebra;;
 # type: Zebra
@@ -86,7 +90,7 @@ type TryNot = If (Not False) Lion Zebra;;
 type Foo = If (Lion extends {tail_length: int}) Lion Tiger;;
 # type: Lion
 
-type Foo = If (Lion extends {tail_length: int}) Lion Never;;
+type Foo = If (Not (Lion extends {tail_length: int})) Lion Never;;
 # type: Never
 
 
@@ -99,8 +103,12 @@ let tryNever = fun f(x): Never -> int is 3;;
 ## Distributive Conditional types
 
 ```ml
-type ExtractCat = tfun f(A): * -> * is If (A extends { meow_loudness: int }) A Never;;
-type ExtractNonCat = tfun f(A): * -> * is If (Not (A extends { meow_loudness: int })) A Never;;
+type ExtractCat = tfun f(A): * -> * is
+     If (A extends { meow_loudness: int }) A Never;;
+type ExtractNonCat = tfun f(A): * -> * is
+     If (Not (A extends { meow_loudness: int })) A Never;;
+
+type Animal = Lion | Zebra | Tiger | Shark;;
 
 type Cat = ExtractCat Over Animal;;
 # => Lion | Tiger
@@ -128,6 +136,7 @@ type ExcludeUserTypeField = tfun f(A): * -> * is
 
 type Test = ExcludeUserTypeField { user_type: "LOGGED_IN", area_code: int, is_premium: bool };;
 # => { area_code: int, is_premium: bool }
+```
 
 # Code
 
